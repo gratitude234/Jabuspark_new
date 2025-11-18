@@ -1,0 +1,1 @@
+export { default } from "file:///C:/Users/sam/jabuspark-mvp/apps/web/node_modules/@nuxt/vite-builder/dist/runtime/client.manifest.mjs"
