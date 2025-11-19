@@ -36,11 +36,9 @@ export default defineNuxtConfig({
     supabaseServiceKey:
       process.env.NUXT_SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_KEY,
     geminiApiKey: process.env.NUXT_GEMINI_API_KEY || process.env.GEMINI_API_KEY,
-    geminiTextModel: process.env.NUXT_GEMINI_MODEL_TEXT || 'models/gemini-2.5-flash',
-    geminiEmbeddingModel:
-      process.env.NUX_GEMINI_MODEL_EMBEDDING ||
-      process.env.NUXT_GEMINI_MODEL_EMBEDDING ||
-      'models/text-embedding-004',
+    geminiModelText: process.env.NUXT_GEMINI_MODEL_TEXT || 'models/gemini-2.5-flash',
+    geminiModelEmbedding:
+      process.env.NUXT_GEMINI_MODEL_EMBEDDING || 'models/text-embedding-004',
     geminiDisabled: process.env.NUXT_GEMINI_DISABLED === 'true',
 
     // public (available on client + server)

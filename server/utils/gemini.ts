@@ -1,28 +1,25 @@
 import { createError } from 'h3'
 
-interface GeminiOptions {
+const GEMINI_DISABLED_MESSAGE = 'Gemini is currently disabled. Please try again later.'
+
+export interface GeminiOptions {
   systemInstruction?: string
   userParts: string[]
   temperature?: number
-  responseMimeType?: string
   maxOutputTokens?: number
+  responseMimeType?: string
 }
 
-export async function generateGeminiText({
-  systemInstruction,
-  userParts,
-  temperature = 0.2,
-  responseMimeType,
-  maxOutputTokens,
-}: GeminiOptions) {
+export async function generateGeminiText(options: GeminiOptions) {
+  const { systemInstruction, userParts, temperature, maxOutputTokens, responseMimeType } =
+    options
   const config = useRuntimeConfig()
-  const apiKey = config.geminiApiKey as string | undefined
-  // default to Gemini 2.5 flash if nothing is set in runtimeConfig
-  const configuredModel =
-    (config.geminiTextModel as string | undefined) || 'models/gemini-2.5-flash'
-  // API expects model names without the leading "models/" when you build the path yourself
-  const model = configuredModel.replace(/^models\//, '')
 
+  if (config.geminiDisabled) {
+    return GEMINI_DISABLED_MESSAGE
+  }
+
+  const apiKey = config.geminiApiKey as string | undefined
   if (!apiKey) {
     throw createError({
       statusCode: 500,
@@ -30,78 +27,87 @@ export async function generateGeminiText({
     })
   }
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
+  const model =
+    (config.geminiModelText as string | undefined) || 'models/gemini-2.5-flash'
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
 
-  const parts = (userParts || []).map((text) => ({ text }))
-
-  // Build generation config using camelCase keys expected by the v1beta API
-  const generationConfig: Record<string, any> = {}
-  if (typeof temperature === 'number') {
-    generationConfig.temperature = temperature
-  }
-  if (responseMimeType) {
-    generationConfig.responseMimeType = responseMimeType
-  }
-  if (typeof maxOutputTokens === 'number') {
-    generationConfig.maxOutputTokens = maxOutputTokens
-  }
-
-  // Build payload with correct field names for Gemini REST API
   const payload: Record<string, any> = {
     contents: [
       {
         role: 'user',
-        parts,
+        parts: buildTextParts(userParts),
       },
     ],
   }
 
-  if (systemInstruction) {
+  if (systemInstruction?.trim()) {
     payload.systemInstruction = {
       role: 'system',
-      parts: [{ text: systemInstruction }],
+      parts: [{ text: systemInstruction.trim() }],
     }
   }
 
-  if (Object.keys(generationConfig).length) {
-    payload.generationConfig = generationConfig
+  const generationConfig: Record<string, any> = {}
+  generationConfig.temperature =
+    typeof temperature === 'number' ? temperature : 0.2
+  generationConfig.maxOutputTokens =
+    typeof maxOutputTokens === 'number' ? maxOutputTokens : 1024
+  if (responseMimeType) {
+    generationConfig.responseMimeType = responseMimeType
   }
+  payload.generationConfig = generationConfig
 
   const response = await fetch(endpoint, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
     body: JSON.stringify(payload),
   })
 
-  // Read raw text once so we can both log and parse it
-  const raw = await response.text()
-  let data: any = raw
-
-  try {
-    data = JSON.parse(raw)
-  } catch {
-    // leave data as raw string if it isn't JSON
-  }
-
   if (!response.ok) {
-    console.error('GEMINI HTTP ERROR:', response.status, data)
+    const errorText = await response.text()
+    console.error('Gemini request failed', response.status, errorText)
     throw createError({
-      statusCode: response.status,
-      statusMessage: `Gemini generate failed: ${raw}`,
+      statusCode: 500,
+      statusMessage: `Gemini request failed (${response.status})`,
     })
   }
 
-  const text = extractGeminiText(data)
-
-  if (!text) {
-    console.error('GEMINI EMPTY / NO USABLE TEXT. FULL PAYLOAD:', data)
+  let data: any
+  try {
+    data = await response.json()
+  } catch (err) {
+    console.error('Failed to parse Gemini response JSON', err)
     throw createError({
-      statusCode: 502,
-      statusMessage: 'Gemini response was empty.',
+      statusCode: 500,
+      statusMessage: 'Gemini returned invalid JSON.',
     })
   }
 
-  return text
+  const textPayload = extractGeminiText(data)
+  if (!textPayload) {
+    console.error('Gemini returned empty payload', data)
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Gemini returned empty response.',
+    })
+  }
+
+  if (responseMimeType === 'application/json') {
+    try {
+      return JSON.parse(textPayload)
+    } catch (err) {
+      console.error('Gemini JSON parse failed', err, textPayload)
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Gemini returned malformed JSON.',
+      })
+    }
+  }
+
+  return textPayload
 }
 
 export function extractGeminiText(payload: any) {
@@ -152,4 +158,11 @@ export function extractGeminiText(payload: any) {
 export function stripCodeFences(text: string) {
   if (!text) return ''
   return text.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim()
+}
+
+function buildTextParts(parts: string[]) {
+  const safeParts = Array.isArray(parts) && parts.length ? parts : ['']
+  return safeParts.map((part) => ({
+    text: typeof part === 'string' && part.length ? part : ' ',
+  }))
 }

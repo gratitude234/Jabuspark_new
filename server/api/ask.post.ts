@@ -6,7 +6,7 @@ import { generateGeminiText } from '~/server/utils/gemini'
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
-  const body = await readBody<{ question: string; docIds?: string[] }>(event)
+  const body = await readBody<{ question: string; docIds?: string[]; mode?: 'ask' }>(event)
   const question = body?.question?.trim()
   if (!question) {
     throw createError({ statusCode: 400, statusMessage: 'Question required' })
@@ -68,18 +68,19 @@ export default defineEventHandler(async (event) => {
   let answerText = ''
   let usedFallback = false
   try {
-    answerText = await generateGeminiText({
+    const response = await generateGeminiText({
       systemInstruction:
-        'You are JabuSpark, an exam-focused study assistant. Answer ONLY with the provided excerpts. Cite the page when possible. If the answer is not covered, say you do not know.',
+        'You are the JabuSpark Ask Tutor for JABU nursing students. Answer only with the provided context excerpts, cite page numbers when possible, and clearly state when the answer cannot be found in the excerpts.',
       userParts: [
-        `QUESTION:\n${question}`,
-        `EXCERPTS:\n${context}`,
-        'Respond with a concise, step-by-step explanation grounded in the excerpts.',
+        `Context:\n\n${context}`,
+        `Question:\n\n${question}`,
       ],
       temperature: 0.2,
-      maxOutputTokens: 768,
+      maxOutputTokens: 800,
     })
-  } catch {
+    answerText = typeof response === 'string' ? response : JSON.stringify(response)
+  } catch (err) {
+    console.error('Gemini answer generation failed', err)
     usedFallback = true
     const fallback = composeAnswer(question, top.map((chunk) => ({ ...chunk, doc_title: docTitleMap[chunk.doc_id] })))
     answerText = fallback.answer
@@ -127,6 +128,8 @@ export default defineEventHandler(async (event) => {
     sessionId,
     answer: answerText,
     confidence,
+    chunkCount: top.length,
+    usedDocIds: allowedDocIds,
     citations: citations.map((citation) => ({
       docId: citation.docId,
       page: citation.page,

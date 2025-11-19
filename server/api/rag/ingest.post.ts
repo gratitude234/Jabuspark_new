@@ -6,7 +6,7 @@ import { createServiceClient } from '~/server/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
-  const body = await readBody<{ docId: string; storagePath?: string }>(event)
+  const body = await readBody<{ docId: string; storagePath?: string; sourceUrl?: string }>(event)
   if (!body?.docId) {
     throw createError({ statusCode: 400, statusMessage: 'docId required' })
   }
@@ -31,7 +31,8 @@ export default defineEventHandler(async (event) => {
   }
 
   const storagePath = doc.storage_path || body.storagePath
-  if (!storagePath) {
+  const sourceUrl = typeof body.sourceUrl === 'string' ? body.sourceUrl.trim() : ''
+  if (!storagePath && !sourceUrl) {
     throw createError({
       statusCode: 400,
       statusMessage: 'Missing storage path for document',
@@ -45,15 +46,32 @@ export default defineEventHandler(async (event) => {
     .eq('id', body.docId)
 
   try {
-    const { data, error } = await supabase.storage.from('docs').download(storagePath)
-    if (error || !data) {
+    let buffer: Buffer
+    if (sourceUrl) {
+      const response = await fetch(sourceUrl)
+      if (!response.ok) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Failed to download document from sourceUrl.',
+        })
+      }
+      buffer = Buffer.from(await response.arrayBuffer())
+    } else if (storagePath) {
+      const { data, error } = await supabase.storage.from('docs').download(storagePath)
+      if (error || !data) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: error?.message || 'Download failed',
+        })
+      }
+      buffer = Buffer.from(await data.arrayBuffer())
+    } else {
       throw createError({
         statusCode: 400,
-        statusMessage: error?.message || 'Download failed',
+        statusMessage: 'No document source provided.',
       })
     }
 
-    const buffer = Buffer.from(await data.arrayBuffer())
     const pages = await extractPdfPages(buffer)
     const chunks = chunkPages(pages)
 
@@ -69,7 +87,7 @@ export default defineEventHandler(async (event) => {
 
     if (chunks.length) {
       const embeddings = await embedTexts(chunks.map((chunk) => chunk.content))
-      const fallbackLength = embeddings[0]?.length || 768
+      const fallbackLength = embeddings[0]?.length || 16
 
       chunks.forEach((chunk, index) => {
         const vector = embeddings[index]
@@ -97,8 +115,6 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    const responsePayload = { chunks: rows.length, pageCount: pages.length }
-
     await supabase
       .from('documents')
       .update({
@@ -124,7 +140,15 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    return responsePayload
+    const embeddingProvider =
+      ((config.public as any)?.embeddingProvider as string | undefined) || 'gemini'
+    return {
+      success: true,
+      docId: body.docId,
+      chunkCount: rows.length,
+      pageCount: pages.length,
+      embeddedWith: embeddingProvider,
+    }
   } catch (err: any) {
     await supabase
       .from('documents')
@@ -151,16 +175,20 @@ async function seedQuestionsForDocument(params: {
   const sectionTexts = buildSectionTexts(chunks)
   if (!sectionTexts.length) return
 
-  for (const sectionText of sectionTexts) {
+  for (let index = 0; index < sectionTexts.length; index += 1) {
+    const sectionText = sectionTexts[index]
     const text = sectionText.trim()
     if (!text) continue
+    const sectionTitle =
+      (courseName ? `${courseName} ` : '') + `Section ${index + 1}`
 
     try {
       await callQuestionGenWithRetry({
         docId,
-        text,
-        courseName: courseName || undefined,
-        maxQuestions: 5, // smaller batch to avoid MAX_TOKENS
+        context: text,
+        sectionTitle,
+        count: 5,
+        mode: 'mcq',
       })
     } catch (err) {
       // At this point we've already retried; log and move on.
@@ -177,9 +205,10 @@ async function seedQuestionsForDocument(params: {
  */
 async function callQuestionGenWithRetry(body: {
   docId: string
-  text: string
-  courseName?: string
-  maxQuestions?: number
+  context: string
+  sectionTitle?: string
+  count?: number
+  mode?: 'mcq' | 'short-answer'
 }) {
   const maxAttempts = 3
 

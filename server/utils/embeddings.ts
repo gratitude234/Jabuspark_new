@@ -1,101 +1,114 @@
 import { createError } from 'h3'
 
-const DEFAULT_VECTOR_SIZE = 768
+const STUB_VECTOR_SIZE = 16
 const MAX_BATCH = 32
 
 export async function embedText(text: string) {
   const vectors = await embedTexts([text])
-  return vectors[0] || new Array(DEFAULT_VECTOR_SIZE).fill(0)
+  return vectors[0] || buildStubVector(text)
 }
 
 export async function embedTexts(texts: string[]) {
-  const config = useRuntimeConfig()
-  if (!texts.length) return []
-  if (config.geminiDisabled) {
-    return texts.map((text) => stubVector(text))
+  if (!Array.isArray(texts) || !texts.length) {
+    return []
   }
 
-  const apiKey = config.geminiApiKey as string | undefined
-  const model =
-    (config.geminiEmbeddingModel as string | undefined) || 'models/text-embedding-004'
-
-  // read provider from public runtimeConfig
+  const config = useRuntimeConfig()
   const provider =
     ((config.public as any)?.embeddingProvider as string | undefined) || 'gemini'
+  const apiKey = config.geminiApiKey as string | undefined
+  const model =
+    (config.geminiModelEmbedding as string | undefined) || 'models/text-embedding-004'
 
-  // If provider is not gemini or we’re missing config, just use stub vectors
-  if (provider !== 'gemini' || !apiKey || !model) {
-    return texts.map((text) => stubVector(text))
+  const shouldUseStub =
+    provider !== 'gemini' || config.geminiDisabled || !apiKey || !model
+
+  if (shouldUseStub) {
+    return texts.map((text) => buildStubVector(text))
   }
 
   const vectors: number[][] = []
   for (let i = 0; i < texts.length; i += MAX_BATCH) {
     const slice = texts.slice(i, i + MAX_BATCH)
-    const batchVectors = await requestEmbeddings(slice, model, apiKey)
+    const batchVectors = await requestEmbeddingBatch(slice, model, apiKey)
     vectors.push(...batchVectors)
   }
   return vectors
 }
 
-async function requestEmbeddings(texts: string[], model: string, apiKey: string) {
+async function requestEmbeddingBatch(
+  texts: string[],
+  model: string,
+  apiKey: string,
+) {
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:batchEmbedContents`
   const body = {
     requests: texts.map((text) => ({
       model,
       content: {
-        role: 'user',
-        parts: [{ text: text || ' ' }],
+        parts: [{ text: text?.length ? text : ' ' }],
       },
     })),
   }
-
-  const endpoint = `https://generativelanguage.googleapis.com/v1/${model}:batchEmbedContents?key=${apiKey}`
 
   let response: Response
   try {
     response = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
       body: JSON.stringify(body),
     })
-  } catch (err: any) {
-    // This is the "TypeError: fetch failed" case (DNS, network, etc.)
-    console.error('Gemini fetch failed (network-level error):', err)
-    // Don’t kill ingest – fall back to stub embeddings
-    return texts.map((text) => stubVector(text))
+  } catch (err) {
+    console.error('Gemini embedding request failed (network)', err)
+    return texts.map((text) => buildStubVector(text))
   }
 
   if (!response.ok) {
     const errorText = await response.text()
-    console.error('Gemini HTTP error:', response.status, errorText)
-
+    console.error('Gemini embedding HTTP error', response.status, errorText)
     throw createError({
-      statusCode: response.status,
-      statusMessage: `Gemini embedding failed: ${errorText}`,
+      statusCode: 500,
+      statusMessage: `Gemini embedding request failed (${response.status})`,
     })
   }
 
-  const payload = await response.json()
-  const embeddings = Array.isArray(payload?.embeddings) ? payload.embeddings : []
+  let payload: any
+  try {
+    payload = await response.json()
+  } catch (err) {
+    console.error('Gemini embedding JSON parse failed', err)
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Gemini embedding response was invalid JSON.',
+    })
+  }
 
+  const embeddings = Array.isArray(payload?.embeddings) ? payload.embeddings : []
   return texts.map((text, index) => {
     const vector = embeddings[index]?.values
     if (Array.isArray(vector) && vector.length) {
       return vector
     }
-    return stubVector(text)
+    return buildStubVector(text)
   })
 }
 
-function stubVector(text: string) {
+function buildStubVector(text: string) {
+  const normalized = typeof text === 'string' ? text : ''
   const vector: number[] = []
   let seed = 0
-  const normalized = text || ''
+
   for (let i = 0; i < normalized.length; i += 1) {
-    seed = (seed + normalized.charCodeAt(i)) % 2147483647
+    seed = (seed * 31 + normalized.charCodeAt(i)) >>> 0
   }
-  for (let i = 0; i < DEFAULT_VECTOR_SIZE; i += 1) {
-    seed = (seed * 16807) % 2147483647
-    vector.push((seed % 2000) / 2000)
+
+  for (let i = 0; i < STUB_VECTOR_SIZE; i += 1) {
+    seed = (1103515245 * seed + 12345) >>> 0
+    vector.push((seed % 1000) / 1000)
   }
+
   return vector
 }

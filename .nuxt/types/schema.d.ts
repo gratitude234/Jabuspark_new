@@ -117,9 +117,9 @@ declare module 'nuxt/schema' {
 
    geminiApiKey: string,
 
-   geminiTextModel: string,
+   geminiModelText: string,
 
-   geminiEmbeddingModel: string,
+   geminiModelEmbedding: string,
 
    geminiDisabled: boolean,
 

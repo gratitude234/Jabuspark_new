@@ -687,8 +687,8 @@ const _inlineRuntimeConfig = {
   },
   "supabaseServiceKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmaXhxeWpid3Nzdmx4b2V6dGhtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2Mjk5MDY5MSwiZXhwIjoyMDc4NTY2NjkxfQ.cNki_zL4VxMLXTyCAo0WIPk7metq-JJ-7ZRni2zGSW0",
   "geminiApiKey": "AIzaSyBklQA4z_RC_jgiZeTusA3_t1TGe5Tjmvo",
-  "geminiTextModel": "models/gemini-2.5-flash",
-  "geminiEmbeddingModel": "models/text-embedding-004",
+  "geminiModelText": "models/gemini-2.5-flash",
+  "geminiModelEmbedding": "models/text-embedding-004",
   "geminiDisabled": true,
   "supabase": {
     "serviceKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmaXhxeWpid3Nzdmx4b2V6dGhtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2Mjk5MDY5MSwiZXhwIjoyMDc4NTY2NjkxfQ.cNki_zL4VxMLXTyCAo0WIPk7metq-JJ-7ZRni2zGSW0"
@@ -1156,7 +1156,22 @@ const plugins = [
 _KbhCGuJ4tiYbi7EgcLp3Yd3YAb6Uha6TVE5ElI3t4
 ];
 
-const assets = {};
+const assets = {
+  "/index.mjs": {
+    "type": "text/javascript; charset=utf-8",
+    "etag": "\"1dbc0-qY7z8QAdiPF3lSh7EoREgT++ODI\"",
+    "mtime": "2025-11-19T07:12:05.827Z",
+    "size": 121792,
+    "path": "index.mjs"
+  },
+  "/index.mjs.map": {
+    "type": "application/json",
+    "etag": "\"70ba8-0ywrLiB9tiZhFnf0ZoPC8avaIv8\"",
+    "mtime": "2025-11-19T07:12:05.827Z",
+    "size": 461736,
+    "path": "index.mjs.map"
+  }
+};
 
 function readAsset (id) {
   const serverDir = dirname$1(fileURLToPath(import.meta.url));
@@ -1963,64 +1978,75 @@ async function requireTutorOrAdminRole(supabase, userId) {
   return role;
 }
 
-const DEFAULT_VECTOR_SIZE = 768;
+const STUB_VECTOR_SIZE = 16;
 const MAX_BATCH = 32;
 async function embedText(text) {
   const vectors = await embedTexts([text]);
-  return vectors[0] || new Array(DEFAULT_VECTOR_SIZE).fill(0);
+  return vectors[0] || buildStubVector(text);
 }
 async function embedTexts(texts) {
   var _a;
-  const config = useRuntimeConfig();
-  if (!texts.length) return [];
-  if (config.geminiDisabled) {
-    return texts.map((text) => stubVector(text));
+  if (!Array.isArray(texts) || !texts.length) {
+    return [];
   }
-  const apiKey = config.geminiApiKey;
-  const model = config.geminiEmbeddingModel || "models/text-embedding-004";
+  const config = useRuntimeConfig();
   const provider = ((_a = config.public) == null ? void 0 : _a.embeddingProvider) || "gemini";
-  if (provider !== "gemini" || !apiKey || !model) {
-    return texts.map((text) => stubVector(text));
+  const apiKey = config.geminiApiKey;
+  const model = config.geminiModelEmbedding || "models/text-embedding-004";
+  const shouldUseStub = provider !== "gemini" || config.geminiDisabled || !apiKey || !model;
+  if (shouldUseStub) {
+    return texts.map((text) => buildStubVector(text));
   }
   const vectors = [];
   for (let i = 0; i < texts.length; i += MAX_BATCH) {
     const slice = texts.slice(i, i + MAX_BATCH);
-    const batchVectors = await requestEmbeddings(slice, model, apiKey);
+    const batchVectors = await requestEmbeddingBatch(slice, model, apiKey);
     vectors.push(...batchVectors);
   }
   return vectors;
 }
-async function requestEmbeddings(texts, model, apiKey) {
+async function requestEmbeddingBatch(texts, model, apiKey) {
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:batchEmbedContents`;
   const body = {
     requests: texts.map((text) => ({
       model,
       content: {
-        role: "user",
-        parts: [{ text: text || " " }]
+        parts: [{ text: (text == null ? void 0 : text.length) ? text : " " }]
       }
     }))
   };
-  const endpoint = `https://generativelanguage.googleapis.com/v1/${model}:batchEmbedContents?key=${apiKey}`;
   let response;
   try {
     response = await fetch(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey
+      },
       body: JSON.stringify(body)
     });
   } catch (err) {
-    console.error("Gemini fetch failed (network-level error):", err);
-    return texts.map((text) => stubVector(text));
+    console.error("Gemini embedding request failed (network)", err);
+    return texts.map((text) => buildStubVector(text));
   }
   if (!response.ok) {
     const errorText = await response.text();
-    console.error("Gemini HTTP error:", response.status, errorText);
+    console.error("Gemini embedding HTTP error", response.status, errorText);
     throw createError({
-      statusCode: response.status,
-      statusMessage: `Gemini embedding failed: ${errorText}`
+      statusCode: 500,
+      statusMessage: `Gemini embedding request failed (${response.status})`
     });
   }
-  const payload = await response.json();
+  let payload;
+  try {
+    payload = await response.json();
+  } catch (err) {
+    console.error("Gemini embedding JSON parse failed", err);
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Gemini embedding response was invalid JSON."
+    });
+  }
   const embeddings = Array.isArray(payload == null ? void 0 : payload.embeddings) ? payload.embeddings : [];
   return texts.map((text, index) => {
     var _a;
@@ -2028,96 +2054,106 @@ async function requestEmbeddings(texts, model, apiKey) {
     if (Array.isArray(vector) && vector.length) {
       return vector;
     }
-    return stubVector(text);
+    return buildStubVector(text);
   });
 }
-function stubVector(text) {
+function buildStubVector(text) {
+  const normalized = typeof text === "string" ? text : "";
   const vector = [];
   let seed = 0;
-  const normalized = text || "";
   for (let i = 0; i < normalized.length; i += 1) {
-    seed = (seed + normalized.charCodeAt(i)) % 2147483647;
+    seed = seed * 31 + normalized.charCodeAt(i) >>> 0;
   }
-  for (let i = 0; i < DEFAULT_VECTOR_SIZE; i += 1) {
-    seed = seed * 16807 % 2147483647;
-    vector.push(seed % 2e3 / 2e3);
+  for (let i = 0; i < STUB_VECTOR_SIZE; i += 1) {
+    seed = 1103515245 * seed + 12345 >>> 0;
+    vector.push(seed % 1e3 / 1e3);
   }
   return vector;
 }
 
-async function generateGeminiText({
-  systemInstruction,
-  userParts,
-  temperature = 0.2,
-  responseMimeType,
-  maxOutputTokens
-}) {
+const GEMINI_DISABLED_MESSAGE = "Gemini is currently disabled. Please try again later.";
+async function generateGeminiText(options) {
+  const { systemInstruction, userParts, temperature, maxOutputTokens, responseMimeType } = options;
   const config = useRuntimeConfig();
+  if (config.geminiDisabled) {
+    return GEMINI_DISABLED_MESSAGE;
+  }
   const apiKey = config.geminiApiKey;
-  const configuredModel = config.geminiTextModel || "models/gemini-2.5-flash";
-  const model = configuredModel.replace(/^models\//, "");
   if (!apiKey) {
     throw createError({
       statusCode: 500,
       statusMessage: "Gemini API key missing"
     });
   }
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-  const parts = (userParts || []).map((text2) => ({ text: text2 }));
-  const generationConfig = {};
-  if (typeof temperature === "number") {
-    generationConfig.temperature = temperature;
-  }
-  if (responseMimeType) {
-    generationConfig.responseMimeType = responseMimeType;
-  }
-  if (typeof maxOutputTokens === "number") {
-    generationConfig.maxOutputTokens = maxOutputTokens;
-  }
+  const model = config.geminiModelText || "models/gemini-2.5-flash";
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const payload = {
     contents: [
       {
         role: "user",
-        parts
+        parts: buildTextParts(userParts)
       }
     ]
   };
-  if (systemInstruction) {
+  if (systemInstruction == null ? void 0 : systemInstruction.trim()) {
     payload.systemInstruction = {
       role: "system",
-      parts: [{ text: systemInstruction }]
+      parts: [{ text: systemInstruction.trim() }]
     };
   }
-  if (Object.keys(generationConfig).length) {
-    payload.generationConfig = generationConfig;
+  const generationConfig = {};
+  generationConfig.temperature = typeof temperature === "number" ? temperature : 0.2;
+  generationConfig.maxOutputTokens = typeof maxOutputTokens === "number" ? maxOutputTokens : 1024;
+  if (responseMimeType) {
+    generationConfig.responseMimeType = responseMimeType;
   }
+  payload.generationConfig = generationConfig;
   const response = await fetch(endpoint, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey
+    },
     body: JSON.stringify(payload)
   });
-  const raw = await response.text();
-  let data = raw;
-  try {
-    data = JSON.parse(raw);
-  } catch {
-  }
   if (!response.ok) {
-    console.error("GEMINI HTTP ERROR:", response.status, data);
+    const errorText = await response.text();
+    console.error("Gemini request failed", response.status, errorText);
     throw createError({
-      statusCode: response.status,
-      statusMessage: `Gemini generate failed: ${raw}`
+      statusCode: 500,
+      statusMessage: `Gemini request failed (${response.status})`
     });
   }
-  const text = extractGeminiText(data);
-  if (!text) {
-    console.error("GEMINI EMPTY / NO USABLE TEXT. FULL PAYLOAD:", data);
+  let data;
+  try {
+    data = await response.json();
+  } catch (err) {
+    console.error("Failed to parse Gemini response JSON", err);
     throw createError({
-      statusCode: 502,
-      statusMessage: "Gemini response was empty."
+      statusCode: 500,
+      statusMessage: "Gemini returned invalid JSON."
     });
   }
-  return text;
+  const textPayload = extractGeminiText(data);
+  if (!textPayload) {
+    console.error("Gemini returned empty payload", data);
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Gemini returned empty response."
+    });
+  }
+  if (responseMimeType === "application/json") {
+    try {
+      return JSON.parse(textPayload);
+    } catch (err) {
+      console.error("Gemini JSON parse failed", err, textPayload);
+      throw createError({
+        statusCode: 500,
+        statusMessage: "Gemini returned malformed JSON."
+      });
+    }
+  }
+  return textPayload;
 }
 function extractGeminiText(payload) {
   var _a, _b, _c, _d, _e;
@@ -2163,6 +2199,12 @@ function extractGeminiText(payload) {
 function stripCodeFences(text) {
   if (!text) return "";
   return text.replace(/```(?:json)?/gi, "").replace(/```/g, "").trim();
+}
+function buildTextParts(parts) {
+  const safeParts = Array.isArray(parts) && parts.length ? parts : [""];
+  return safeParts.map((part) => ({
+    text: typeof part === "string" && part.length ? part : " "
+  }));
 }
 
 async function extractPdfPages(buffer) {
@@ -2546,19 +2588,22 @@ const ask_post = defineEventHandler(async (event) => {
   let answerText = "";
   let usedFallback = false;
   try {
-    answerText = await generateGeminiText({
-      systemInstruction: "You are JabuSpark, an exam-focused study assistant. Answer ONLY with the provided excerpts. Cite the page when possible. If the answer is not covered, say you do not know.",
+    const response = await generateGeminiText({
+      systemInstruction: "You are the JabuSpark Ask Tutor for JABU nursing students. Answer only with the provided context excerpts, cite page numbers when possible, and clearly state when the answer cannot be found in the excerpts.",
       userParts: [
-        `QUESTION:
-${question}`,
-        `EXCERPTS:
+        `Context:
+
 ${context}`,
-        "Respond with a concise, step-by-step explanation grounded in the excerpts."
+        `Question:
+
+${question}`
       ],
       temperature: 0.2,
-      maxOutputTokens: 768
+      maxOutputTokens: 800
     });
-  } catch {
+    answerText = typeof response === "string" ? response : JSON.stringify(response);
+  } catch (err) {
+    console.error("Gemini answer generation failed", err);
     usedFallback = true;
     const fallback = composeAnswer(question, top.map((chunk) => ({ ...chunk, doc_title: docTitleMap[chunk.doc_id] })));
     answerText = fallback.answer;
@@ -2602,6 +2647,8 @@ ${context}`,
     sessionId,
     answer: answerText,
     confidence,
+    chunkCount: top.length,
+    usedDocIds: allowedDocIds,
     citations: citations.map((citation) => ({
       docId: citation.docId,
       page: citation.page,
@@ -2660,6 +2707,7 @@ const drill_post = defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: "Sign in required." });
   }
   const body = await readBody(event);
+  const difficulty = normalizeDifficulty(body == null ? void 0 : body.difficulty);
   const docIds = normalizeDocIds(body == null ? void 0 : body.docIds);
   if (!docIds.length) {
     throw createError({ statusCode: 400, statusMessage: "Select at least one document." });
@@ -2694,7 +2742,17 @@ const drill_post = defineEventHandler(async (event) => {
       statusMessage: "No pre-generated questions found for these docs yet."
     });
   }
-  const shuffled = shuffle(rows.slice());
+  let questionRows = rows != null ? rows : [];
+  if (difficulty !== "mixed") {
+    const filtered = questionRows.filter((row) => {
+      const value = typeof row.difficulty === "string" ? row.difficulty.toLowerCase() : "";
+      return value === difficulty;
+    });
+    if (filtered.length) {
+      questionRows = filtered;
+    }
+  }
+  const shuffled = shuffle(questionRows.slice());
   const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
   const mapped = [];
   for (const row of selected) {
@@ -2712,7 +2770,8 @@ const drill_post = defineEventHandler(async (event) => {
   const sessionId = await logDrillSession(supabase, {
     userId: user.id,
     docIds: verifiedDocIds,
-    questionCount: mapped.length
+    questionCount: mapped.length,
+    difficulty
   });
   return {
     sessionId,
@@ -2763,26 +2822,50 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 async function logDrillSession(supabase, params) {
-  var _a;
+  var _a, _b, _c, _d;
   try {
-    const { data, error } = await supabase.from("drills").insert({
+    const basePayload = {
       user_id: params.userId,
       doc_ids: params.docIds,
       question_count: params.questionCount
-    }).select("id").maybeSingle();
-    if (error) {
-      if (error.code === "42P01") {
+    };
+    if (params.difficulty && params.difficulty !== "mixed") {
+      basePayload.difficulty = params.difficulty;
+    }
+    const { data, error } = await supabase.from("drills").insert(basePayload).select("id").maybeSingle();
+    if (!error) {
+      return (_a = data == null ? void 0 : data.id) != null ? _a : null;
+    }
+    if (error.code === "42703" && "difficulty" in basePayload) {
+      delete basePayload.difficulty;
+      const retry = await supabase.from("drills").insert(basePayload).select("id").maybeSingle();
+      if (!retry.error) {
+        return (_c = (_b = retry.data) == null ? void 0 : _b.id) != null ? _c : null;
+      }
+      if (((_d = retry.error) == null ? void 0 : _d.code) === "42P01") {
         console.warn("drills table missing; skipping drill session logging.");
         return null;
       }
-      console.error("Failed to log drill session", error);
+      if (retry.error) {
+        console.error("Failed to log drill session after retry", retry.error);
+        return null;
+      }
+    }
+    if (error.code === "42P01") {
+      console.warn("drills table missing; skipping drill session logging.");
       return null;
     }
-    return (_a = data == null ? void 0 : data.id) != null ? _a : null;
+    console.error("Failed to log drill session", error);
+    return null;
   } catch (err) {
     console.error("Unexpected drill session logging failure", err);
     return null;
   }
+}
+function normalizeDifficulty(value) {
+  const normalized = typeof value === "string" ? value.toLowerCase().trim() : "";
+  if (normalized === "easy" || normalized === "hard") return normalized;
+  return "mixed";
 }
 
 const drill_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
@@ -2873,7 +2956,7 @@ const generate_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePro
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const ingest_post = defineEventHandler(async (event) => {
-  var _a;
+  var _a, _b;
   const config = useRuntimeConfig();
   const body = await readBody(event);
   if (!(body == null ? void 0 : body.docId)) {
@@ -2892,7 +2975,8 @@ const ingest_post = defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, statusMessage: "Not your doc" });
   }
   const storagePath = doc.storage_path || body.storagePath;
-  if (!storagePath) {
+  const sourceUrl = typeof body.sourceUrl === "string" ? body.sourceUrl.trim() : "";
+  if (!storagePath && !sourceUrl) {
     throw createError({
       statusCode: 400,
       statusMessage: "Missing storage path for document"
@@ -2901,21 +2985,38 @@ const ingest_post = defineEventHandler(async (event) => {
   const now = (/* @__PURE__ */ new Date()).toISOString();
   await supabase.from("documents").update({ status: "processing", error_message: null, updated_at: now }).eq("id", body.docId);
   try {
-    const { data, error } = await supabase.storage.from("docs").download(storagePath);
-    if (error || !data) {
+    let buffer;
+    if (sourceUrl) {
+      const response = await fetch(sourceUrl);
+      if (!response.ok) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: "Failed to download document from sourceUrl."
+        });
+      }
+      buffer = Buffer.from(await response.arrayBuffer());
+    } else if (storagePath) {
+      const { data, error } = await supabase.storage.from("docs").download(storagePath);
+      if (error || !data) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: (error == null ? void 0 : error.message) || "Download failed"
+        });
+      }
+      buffer = Buffer.from(await data.arrayBuffer());
+    } else {
       throw createError({
         statusCode: 400,
-        statusMessage: (error == null ? void 0 : error.message) || "Download failed"
+        statusMessage: "No document source provided."
       });
     }
-    const buffer = Buffer.from(await data.arrayBuffer());
     const pages = await extractPdfPages(buffer);
     const chunks = chunkPages(pages);
     await supabase.from("doc_chunks").delete().eq("doc_id", body.docId);
     const rows = [];
     if (chunks.length) {
       const embeddings = await embedTexts(chunks.map((chunk) => chunk.content));
-      const fallbackLength = ((_a = embeddings[0]) == null ? void 0 : _a.length) || 768;
+      const fallbackLength = ((_a = embeddings[0]) == null ? void 0 : _a.length) || 16;
       chunks.forEach((chunk, index) => {
         const vector = embeddings[index];
         rows.push({
@@ -2937,7 +3038,6 @@ const ingest_post = defineEventHandler(async (event) => {
         }
       }
     }
-    const responsePayload = { chunks: rows.length, pageCount: pages.length };
     await supabase.from("documents").update({
       status: "ready",
       pages_count: pages.length,
@@ -2952,7 +3052,14 @@ const ingest_post = defineEventHandler(async (event) => {
         chunks
       });
     }
-    return responsePayload;
+    const embeddingProvider = ((_b = config.public) == null ? void 0 : _b.embeddingProvider) || "gemini";
+    return {
+      success: true,
+      docId: body.docId,
+      chunkCount: rows.length,
+      pageCount: pages.length,
+      embeddedWith: embeddingProvider
+    };
   } catch (err) {
     await supabase.from("documents").update({
       status: "failed",
@@ -2967,16 +3074,18 @@ async function seedQuestionsForDocument(params) {
   if (!Array.isArray(chunks) || !chunks.length) return;
   const sectionTexts = buildSectionTexts(chunks);
   if (!sectionTexts.length) return;
-  for (const sectionText of sectionTexts) {
+  for (let index = 0; index < sectionTexts.length; index += 1) {
+    const sectionText = sectionTexts[index];
     const text = sectionText.trim();
     if (!text) continue;
+    const sectionTitle = (courseName ? `${courseName} ` : "") + `Section ${index + 1}`;
     try {
       await callQuestionGenWithRetry({
         docId,
-        text,
-        courseName: courseName || void 0,
-        maxQuestions: 5
-        // smaller batch to avoid MAX_TOKENS
+        context: text,
+        sectionTitle,
+        count: 5,
+        mode: "mcq"
       });
     } catch (err) {
       console.error("Failed to generate questions for section", docId, err);

@@ -1,28 +1,39 @@
 <template>
-  <main class="mx-auto flex max-w-4xl flex-col gap-6 px-4 pb-24 pt-6">
+  <main
+    class="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-6 bg-background px-4 pb-24 pt-6 text-slate-50"
+  >
     <!-- Header + context -->
-    <section class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-      <div class="space-y-2">
+    <section
+      class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
+    >
+      <div class="space-y-3">
         <NuxtLink
           to="/library"
-          class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 hover:text-amber-200"
+          class="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 transition hover:text-primary-soft"
         >
           ← Library
         </NuxtLink>
 
         <div class="space-y-1">
-          <h1 class="text-2xl font-semibold leading-tight">
+          <p
+            class="inline-flex items-center gap-1 rounded-full bg-primary-soft/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary"
+          >
+            <span class="h-1.5 w-1.5 rounded-full bg-accent"></span>
+            Reader
+          </p>
+          <h1 class="text-2xl font-semibold leading-tight sm:text-3xl">
             {{ doc?.title || 'Document' }}
           </h1>
-          <p class="text-xs text-slate-500">
-            Scroll the PDF, pick a page, then ask questions or drill from this handout.
+          <p class="text-xs text-slate-400">
+            Scroll the PDF, pick a page, then ask questions or drill from this
+            handout.
           </p>
         </div>
 
         <div class="flex flex-wrap gap-2 text-[11px] text-slate-400">
           <span
             v-if="doc?.course"
-            class="inline-flex items-center rounded-full bg-slate-900 px-2.5 py-1 text-amber-200"
+            class="inline-flex items-center rounded-full bg-background px-2.5 py-1 text-primary-soft"
           >
             {{ doc.course }}
           </span>
@@ -37,7 +48,7 @@
 
           <span
             v-if="pages.length"
-            class="inline-flex items-center rounded-full bg-slate-900 px-2.5 py-1"
+            class="inline-flex items-center rounded-full bg-background px-2.5 py-1"
           >
             {{ pages.length }} page(s)
           </span>
@@ -45,16 +56,18 @@
       </div>
 
       <!-- Primary actions -->
-      <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+      <div
+        class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center"
+      >
         <Button
-          class="w-full sm:w-auto"
+          class="w-full bg-primary text-background hover:bg-primary/90 sm:w-auto"
           :disabled="!doc"
           @click="askAboutPage"
         >
           Ask about this page
         </Button>
         <Button
-          class="w-full bg-slate-800 text-white hover:bg-slate-700 sm:w-auto"
+          class="w-full border border-borderSubtle bg-surface text-slate-100 hover:border-accent hover:bg-accent/10 sm:w-auto"
           :disabled="!doc"
           @click="drillThisDoc"
         >
@@ -65,18 +78,20 @@
 
     <!-- PDF preview -->
     <section class="space-y-3">
-      <Card class="overflow-hidden bg-slate-950/80">
+      <Card
+        class="overflow-hidden border border-borderSubtle bg-surface/95 shadow-sm shadow-background/40"
+      >
         <div class="h-[480px] w-full">
           <!-- Loading skeleton -->
           <div
             v-if="loading"
-            class="h-full w-full animate-pulse rounded-2xl bg-slate-900/80"
+            class="h-full w-full animate-pulse rounded-2xl bg-surface/70"
           />
 
           <!-- Error -->
           <div
             v-else-if="error"
-            class="flex h-full items-center justify-center p-6 text-center text-sm text-rose-200"
+            class="flex h-full items-center justify-center p-6 text-center text-sm text-danger"
           >
             {{ error }}
           </div>
@@ -85,7 +100,7 @@
           <iframe
             v-else-if="pdfUrl"
             :src="pdfUrl"
-            class="h-full w-full rounded-2xl border-0"
+            class="h-full w-full rounded-2xl border-0 bg-background"
             title="PDF preview"
           ></iframe>
 
@@ -100,44 +115,49 @@
       </Card>
 
       <!-- Page selector -->
-      <div
-        v-if="pages.length"
-        class="flex flex-wrap gap-2"
-      >
+      <div v-if="pages.length" class="flex flex-wrap gap-2">
         <button
           v-for="page in pages"
           :key="page"
           type="button"
           class="rounded-full border px-3 py-1 text-xs transition"
-          :class="page === currentPage
-            ? 'border-amber-200 bg-amber-200/10 text-amber-100'
-            : 'border-white/10 text-slate-400 hover:border-amber-200/70 hover:text-amber-100'"
+          :class="
+            page === currentPage
+              ? 'border-primary bg-primary/10 text-primary-soft shadow-sm shadow-primary/40'
+              : 'border-borderSubtle text-slate-400 hover:border-primary hover:text-primary-soft'
+          "
           @click="setPage(page)"
         >
           p{{ page }}
         </button>
       </div>
-      <p
-        v-else
-        class="text-xs text-slate-500"
-      >
+      <p v-else class="text-xs text-slate-500">
         Page navigation will appear once this document finishes processing.
       </p>
     </section>
 
     <!-- Helper tips -->
     <section class="space-y-2">
-      <Card class="space-y-3 bg-slate-950/80">
-        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+      <Card
+        class="space-y-3 border border-borderSubtle bg-surface/95 shadow-sm shadow-background/40"
+      >
+        <p
+          class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400"
+        >
           How to use this view
         </p>
         <ul class="list-disc space-y-1 pl-5 text-sm text-slate-200">
-          <li>Use the page chips to tell JabuSpark which part of the handout you’re focused on.</li>
           <li>
-            <span class="font-semibold">“Ask about this page”</span> opens the Ask screen with this doc and page pre-selected.
+            Use the page chips to tell JabuSpark which part of the handout
+            you’re focused on.
           </li>
           <li>
-            <span class="font-semibold">“Start MCQ drill”</span> jumps into Quick Drill using this document as a source.
+            <span class="font-semibold">“Ask about this page”</span> opens the
+            Ask screen with this doc and page pre-selected.
+          </li>
+          <li>
+            <span class="font-semibold">“Start MCQ drill”</span> jumps into
+            Quick Drill using this document as a source.
           </li>
         </ul>
       </Card>
@@ -179,15 +199,15 @@ const statusLabel = computed(() => {
 const statusBadgeClass = computed(() => {
   const status = (doc.value as any)?.status
   if (status === 'ready') {
-    return 'bg-emerald-500/10 text-emerald-200 border border-emerald-400/40'
+    return 'bg-success/10 text-success border border-success/50'
   }
   if (status === 'processing') {
-    return 'bg-amber-500/10 text-amber-200 border border-amber-400/40'
+    return 'bg-warning/10 text-warning border border-warning/50'
   }
   if (status === 'failed') {
-    return 'bg-rose-500/10 text-rose-200 border border-rose-400/40'
+    return 'bg-danger/10 text-danger border border-danger/50'
   }
-  return 'bg-slate-900 text-slate-300 border border-white/10'
+  return 'bg-background text-slate-300 border border-borderSubtle'
 })
 
 onMounted(async () => {
@@ -200,7 +220,7 @@ watch(
     if (!value) return
     const page = Number(value)
     if (!Number.isNaN(page)) currentPage.value = page
-  }
+  },
 )
 
 // Save reader session whenever page changes
@@ -242,9 +262,8 @@ async function fetchDoc() {
       return
     }
 
-    // 10-minute signed URL, same as your old code
-    const { data: signed, error: signedErr } = await client
-      .storage
+    // 10-minute signed URL
+    const { data: signed, error: signedErr } = await client.storage
       .from('docs')
       .createSignedUrl(storagePath, 60 * 10)
 

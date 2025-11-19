@@ -75,7 +75,9 @@ export const useAuth = defineStore('auth', {
       const client = useSupabaseClient()
       const { data, error } = await client
         .from('profiles')
-        .select('id, full_name, avatar_url, email, role')
+        .select(
+          'id, full_name, email, avatar_url, matric_no, faculty, department, level, role, created_at',
+        )
         .eq('id', this.user.id)
         .maybeSingle()
       if (error) {

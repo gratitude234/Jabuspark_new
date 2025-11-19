@@ -11,10 +11,35 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Legacy / convenient alias
         brand: {
-          DEFAULT: '#0f172a',
-          accent: '#fbbf24',
+          DEFAULT: '#1D4ED8', // primary blue
+          accent: '#FB6962',  // warm CTA
+          soft: '#DBEAFE',    // light blue background for chips, etc.
         },
+
+        // App shell
+        background: '#020617',   // page background
+        surface: '#0F172A',      // cards / panels
+        borderSubtle: '#1E293B', // dividers, card borders
+
+        // Main brand colors
+        primary: {
+          DEFAULT: '#1D4ED8',
+          soft: '#DBEAFE',
+          deep: '#0B2474',
+        },
+
+        accent: {
+          DEFAULT: '#FB6962',
+          soft: '#FEE2E2',
+        },
+
+        // Status colors
+        success: '#22C55E',
+        warning: '#FBBF24',
+        danger: '#EF4444',
+        info: '#0EA5E9',
       },
     },
   },

@@ -6,6 +6,7 @@ import { createServiceClient } from '~/server/utils/supabase'
 interface DrillRequestBody {
   docIds?: string[]
   count?: number
+  difficulty?: string
 }
 
 const DEFAULT_COUNT = 10
@@ -19,6 +20,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody<DrillRequestBody>(event)
+  const difficulty = normalizeDifficulty(body?.difficulty)
   const docIds = normalizeDocIds(body?.docIds)
   if (!docIds.length) {
     throw createError({ statusCode: 400, statusMessage: 'Select at least one document.' })
@@ -69,7 +71,21 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const shuffled = shuffle(rows.slice())
+  let questionRows = rows ?? []
+  if (difficulty !== 'mixed') {
+    const filtered = questionRows.filter((row) => {
+      const value =
+        typeof row.difficulty === 'string'
+          ? row.difficulty.toLowerCase()
+          : ''
+      return value === difficulty
+    })
+    if (filtered.length) {
+      questionRows = filtered
+    }
+  }
+
+  const shuffled = shuffle(questionRows.slice())
   const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length))
 
   const mapped: DrillQuestion[] = []
@@ -91,6 +107,7 @@ export default defineEventHandler(async (event) => {
     userId: user.id,
     docIds: verifiedDocIds,
     questionCount: mapped.length,
+    difficulty,
   })
 
   return {
@@ -178,29 +195,51 @@ function clamp(value: number, min: number, max: number) {
 
 async function logDrillSession(
   supabase: ReturnType<typeof createServiceClient>,
-  params: { userId: string; docIds: string[]; questionCount: number },
+  params: { userId: string; docIds: string[]; questionCount: number; difficulty: 'easy' | 'mixed' | 'hard' },
 ) {
   try {
-    const { data, error } = await supabase
-      .from('drills')
-      .insert({
-        user_id: params.userId,
-        doc_ids: params.docIds,
-        question_count: params.questionCount,
-      })
-      .select('id')
-      .maybeSingle()
-    if (error) {
-      if (error.code === '42P01') {
+    const basePayload: Record<string, any> = {
+      user_id: params.userId,
+      doc_ids: params.docIds,
+      question_count: params.questionCount,
+    }
+    if (params.difficulty && params.difficulty !== 'mixed') {
+      basePayload.difficulty = params.difficulty
+    }
+
+    const { data, error } = await supabase.from('drills').insert(basePayload).select('id').maybeSingle()
+    if (!error) {
+      return data?.id ?? null
+    }
+    if (error.code === '42703' && 'difficulty' in basePayload) {
+      delete basePayload.difficulty
+      const retry = await supabase.from('drills').insert(basePayload).select('id').maybeSingle()
+      if (!retry.error) {
+        return retry.data?.id ?? null
+      }
+      if (retry.error?.code === '42P01') {
         console.warn('drills table missing; skipping drill session logging.')
         return null
       }
-      console.error('Failed to log drill session', error)
+      if (retry.error) {
+        console.error('Failed to log drill session after retry', retry.error)
+        return null
+      }
+    }
+    if (error.code === '42P01') {
+      console.warn('drills table missing; skipping drill session logging.')
       return null
     }
-    return data?.id ?? null
+    console.error('Failed to log drill session', error)
+    return null
   } catch (err) {
     console.error('Unexpected drill session logging failure', err)
     return null
   }
+}
+
+function normalizeDifficulty(value?: string | null): 'easy' | 'mixed' | 'hard' {
+  const normalized = typeof value === 'string' ? value.toLowerCase().trim() : ''
+  if (normalized === 'easy' || normalized === 'hard') return normalized
+  return 'mixed'
 }

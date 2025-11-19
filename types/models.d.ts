@@ -46,4 +46,12 @@ export interface DrillSession {
 export interface Profile {
   id: string
   full_name: string | null
-  avatar_url: string | nu
+  avatar_url: string | null
+  email: string | null
+  matric_no: string | null
+  faculty: string | null
+  department: string | null
+  level: string | null
+  role: 'student' | 'rep' | 'tutor' | 'admin'
+  created_at?: string | null
+}
