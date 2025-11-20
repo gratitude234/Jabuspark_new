@@ -45,14 +45,12 @@ declare global {
   const embedText: typeof import('../../server/utils/embeddings').embedText
   const embedTexts: typeof import('../../server/utils/embeddings').embedTexts
   const eventHandler: typeof import('../../node_modules/h3').eventHandler
-  const extractGeminiText: typeof import('../../server/utils/gemini').extractGeminiText
   const extractPdfPages: typeof import('../../server/utils/pdf').extractPdfPages
   const fetchWithEvent: typeof import('../../node_modules/h3').fetchWithEvent
   const fromNodeMiddleware: typeof import('../../node_modules/h3').fromNodeMiddleware
   const fromPlainHandler: typeof import('../../node_modules/h3').fromPlainHandler
   const fromWebHandler: typeof import('../../node_modules/h3').fromWebHandler
   const generateGeminiText: typeof import('../../server/utils/gemini').generateGeminiText
-  const generateSectionQuestionsFromText: typeof import('../../server/utils/sectionQuestions').generateSectionQuestionsFromText
   const getCookie: typeof import('../../node_modules/h3').getCookie
   const getHeader: typeof import('../../node_modules/h3').getHeader
   const getHeaders: typeof import('../../node_modules/h3').getHeaders
@@ -120,7 +118,6 @@ declare global {
   const setResponseHeaders: typeof import('../../node_modules/h3').setResponseHeaders
   const setResponseStatus: typeof import('../../node_modules/h3').setResponseStatus
   const splitCookiesString: typeof import('../../node_modules/h3').splitCookiesString
-  const stripCodeFences: typeof import('../../server/utils/gemini').stripCodeFences
   const toEventHandler: typeof import('../../node_modules/h3').toEventHandler
   const toNodeListener: typeof import('../../node_modules/h3').toNodeListener
   const toPlainHandler: typeof import('../../node_modules/h3').toPlainHandler
@@ -142,9 +139,6 @@ declare global {
   // @ts-ignore
   export type { PageChunk } from '../../server/utils/retrieval'
   import('../../server/utils/retrieval')
-  // @ts-ignore
-  export type { GeneratedSectionPayload } from '../../server/utils/sectionQuestions'
-  import('../../server/utils/sectionQuestions')
 }
 export { useNitroApp } from 'nitropack/runtime/internal/app';
 export { useRuntimeConfig, useAppConfig } from 'nitropack/runtime/internal/config';
@@ -162,8 +156,7 @@ export { buildAssetsURL as __buildAssetsURL, publicAssetsURL as __publicAssetsUR
 export { defineAppConfig } from 'C:/Users/sam/jabuspark-mvp/apps/web/node_modules/nuxt/dist/core/runtime/nitro/utils/config';
 export { requireTutorOrAdminRole } from 'C:/Users/sam/jabuspark-mvp/apps/web/server/utils/admin';
 export { embedText, embedTexts } from 'C:/Users/sam/jabuspark-mvp/apps/web/server/utils/embeddings';
-export { generateGeminiText, extractGeminiText, stripCodeFences } from 'C:/Users/sam/jabuspark-mvp/apps/web/server/utils/gemini';
+export { generateGeminiText } from 'C:/Users/sam/jabuspark-mvp/apps/web/server/utils/gemini';
 export { extractPdfPages } from 'C:/Users/sam/jabuspark-mvp/apps/web/server/utils/pdf';
 export { chunkPages, cosineSimilarity, composeAnswer } from 'C:/Users/sam/jabuspark-mvp/apps/web/server/utils/retrieval';
-export { generateSectionQuestionsFromText } from 'C:/Users/sam/jabuspark-mvp/apps/web/server/utils/sectionQuestions';
 export { createServiceClient } from 'C:/Users/sam/jabuspark-mvp/apps/web/server/utils/supabase';

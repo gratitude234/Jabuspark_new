@@ -689,7 +689,7 @@ const _inlineRuntimeConfig = {
   "geminiApiKey": "AIzaSyBklQA4z_RC_jgiZeTusA3_t1TGe5Tjmvo",
   "geminiModelText": "models/gemini-2.5-flash",
   "geminiModelEmbedding": "models/text-embedding-004",
-  "geminiDisabled": true,
+  "geminiDisabled": false,
   "supabase": {
     "serviceKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmaXhxeWpid3Nzdmx4b2V6dGhtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2Mjk5MDY5MSwiZXhwIjoyMDc4NTY2NjkxfQ.cNki_zL4VxMLXTyCAo0WIPk7metq-JJ-7ZRni2zGSW0"
   }
@@ -1156,22 +1156,7 @@ const plugins = [
 _KbhCGuJ4tiYbi7EgcLp3Yd3YAb6Uha6TVE5ElI3t4
 ];
 
-const assets = {
-  "/index.mjs": {
-    "type": "text/javascript; charset=utf-8",
-    "etag": "\"1dbc0-qY7z8QAdiPF3lSh7EoREgT++ODI\"",
-    "mtime": "2025-11-19T07:12:05.827Z",
-    "size": 121792,
-    "path": "index.mjs"
-  },
-  "/index.mjs.map": {
-    "type": "application/json",
-    "etag": "\"70ba8-0ywrLiB9tiZhFnf0ZoPC8avaIv8\"",
-    "mtime": "2025-11-19T07:12:05.827Z",
-    "size": 461736,
-    "path": "index.mjs.map"
-  }
-};
+const assets = {};
 
 function readAsset (id) {
   const serverDir = dirname$1(fileURLToPath(import.meta.url));
@@ -1978,7 +1963,7 @@ async function requireTutorOrAdminRole(supabase, userId) {
   return role;
 }
 
-const STUB_VECTOR_SIZE = 16;
+const STUB_VECTOR_SIZE = 768;
 const MAX_BATCH = 32;
 async function embedText(text) {
   const vectors = await embedTexts([text]);
@@ -1992,7 +1977,8 @@ async function embedTexts(texts) {
   const config = useRuntimeConfig();
   const provider = ((_a = config.public) == null ? void 0 : _a.embeddingProvider) || "gemini";
   const apiKey = config.geminiApiKey;
-  const model = config.geminiModelEmbedding || "models/text-embedding-004";
+  const rawModel = config.geminiModelEmbedding || "text-embedding-004";
+  const model = rawModel.startsWith("models/") ? rawModel : `models/${rawModel}`;
   const shouldUseStub = provider !== "gemini" || config.geminiDisabled || !apiKey || !model;
   if (shouldUseStub) {
     return texts.map((text) => buildStubVector(text));
@@ -2006,8 +1992,9 @@ async function embedTexts(texts) {
   return vectors;
 }
 async function requestEmbeddingBatch(texts, model, apiKey) {
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:batchEmbedContents`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/${model}:batchEmbedContents`;
   const body = {
+    // Each request repeats the same model name
     requests: texts.map((text) => ({
       model,
       content: {
@@ -2071,140 +2058,115 @@ function buildStubVector(text) {
   return vector;
 }
 
-const GEMINI_DISABLED_MESSAGE = "Gemini is currently disabled. Please try again later.";
-async function generateGeminiText(options) {
-  const { systemInstruction, userParts, temperature, maxOutputTokens, responseMimeType } = options;
+async function generateGeminiText({
+  systemInstruction,
+  userParts,
+  temperature = 0.2,
+  maxOutputTokens = 1024,
+  responseMimeType
+}) {
+  var _a, _b;
   const config = useRuntimeConfig();
-  if (config.geminiDisabled) {
-    return GEMINI_DISABLED_MESSAGE;
-  }
   const apiKey = config.geminiApiKey;
+  const rawModel = config.geminiModelText || "gemini-2.5-flash";
+  const model = rawModel.startsWith("models/") ? rawModel : `models/${rawModel}`;
+  if (config.geminiDisabled) {
+    return "Gemini is currently disabled. Please try again later.";
+  }
   if (!apiKey) {
     throw createError({
       statusCode: 500,
       statusMessage: "Gemini API key missing"
     });
   }
-  const model = config.geminiModelText || "models/gemini-2.5-flash";
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-  const payload = {
-    contents: [
-      {
-        role: "user",
-        parts: buildTextParts(userParts)
-      }
-    ]
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent`;
+  const contents = [
+    {
+      role: "user",
+      parts: (userParts || []).map((text) => ({ text }))
+    }
+  ];
+  const body = {
+    contents,
+    generationConfig: {
+      temperature,
+      maxOutputTokens
+    }
   };
-  if (systemInstruction == null ? void 0 : systemInstruction.trim()) {
-    payload.systemInstruction = {
+  if (responseMimeType) {
+    body.generationConfig.responseMimeType = responseMimeType;
+  }
+  if (systemInstruction) {
+    body.systemInstruction = {
       role: "system",
-      parts: [{ text: systemInstruction.trim() }]
+      parts: [{ text: systemInstruction }]
     };
   }
-  const generationConfig = {};
-  generationConfig.temperature = typeof temperature === "number" ? temperature : 0.2;
-  generationConfig.maxOutputTokens = typeof maxOutputTokens === "number" ? maxOutputTokens : 1024;
-  if (responseMimeType) {
-    generationConfig.responseMimeType = responseMimeType;
+  let response;
+  try {
+    response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey
+      },
+      body: JSON.stringify(body)
+    });
+  } catch (err) {
+    console.error("Gemini text request failed (network)", err);
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Gemini request failed (network error)"
+    });
   }
-  payload.generationConfig = generationConfig;
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-goog-api-key": apiKey
-    },
-    body: JSON.stringify(payload)
-  });
   if (!response.ok) {
     const errorText = await response.text();
-    console.error("Gemini request failed", response.status, errorText);
+    console.error("Gemini text HTTP error", response.status, errorText);
     throw createError({
       statusCode: 500,
       statusMessage: `Gemini request failed (${response.status})`
     });
   }
-  let data;
+  let payload;
   try {
-    data = await response.json();
+    payload = await response.json();
   } catch (err) {
-    console.error("Failed to parse Gemini response JSON", err);
+    console.error("Gemini text JSON parse failed (outer payload)", err);
     throw createError({
       statusCode: 500,
-      statusMessage: "Gemini returned invalid JSON."
+      statusMessage: "Gemini response was invalid JSON."
     });
   }
-  const textPayload = extractGeminiText(data);
-  if (!textPayload) {
-    console.error("Gemini returned empty payload", data);
-    throw createError({
-      statusCode: 500,
-      statusMessage: "Gemini returned empty response."
-    });
-  }
+  const candidate = (_a = payload == null ? void 0 : payload.candidates) == null ? void 0 : _a[0];
+  const parts = ((_b = candidate == null ? void 0 : candidate.content) == null ? void 0 : _b.parts) || [];
   if (responseMimeType === "application/json") {
-    try {
-      return JSON.parse(textPayload);
-    } catch (err) {
-      console.error("Gemini JSON parse failed", err, textPayload);
+    let combined = parts.map((p) => p.text || "").join("").trim();
+    if (!combined) {
       throw createError({
         statusCode: 500,
-        statusMessage: "Gemini returned malformed JSON."
+        statusMessage: "Gemini returned empty JSON response"
+      });
+    }
+    combined = combined.replace(/```(?:json)?/gi, "").replace(/```/g, "").trim();
+    combined = combined.replace(/,\s*(\]|\})/g, "$1");
+    try {
+      return JSON.parse(combined);
+    } catch (err) {
+      console.error("Gemini JSON content parse failed", combined, err);
+      throw createError({
+        statusCode: 500,
+        statusMessage: "Gemini returned invalid JSON content."
       });
     }
   }
-  return textPayload;
-}
-function extractGeminiText(payload) {
-  var _a, _b, _c, _d, _e;
-  const parts = (_c = (_b = (_a = payload == null ? void 0 : payload.candidates) == null ? void 0 : _a[0]) == null ? void 0 : _b.content) == null ? void 0 : _c.parts;
-  if (!Array.isArray(parts)) return "";
-  const segments = [];
-  for (const part of parts) {
-    if (typeof (part == null ? void 0 : part.text) === "string") {
-      segments.push(part.text);
-      continue;
-    }
-    if ((_d = part == null ? void 0 : part.functionCall) == null ? void 0 : _d.args) {
-      try {
-        segments.push(JSON.stringify(part.functionCall.args));
-        continue;
-      } catch {
-      }
-    }
-    if ((_e = part == null ? void 0 : part.inlineData) == null ? void 0 : _e.data) {
-      try {
-        const decoded = Buffer.from(part.inlineData.data, "base64").toString("utf8");
-        segments.push(decoded);
-        continue;
-      } catch {
-      }
-    }
-    if ((part == null ? void 0 : part.mimeType) === "application/json" && (part == null ? void 0 : part.data)) {
-      try {
-        segments.push(Buffer.from(part.data, "base64").toString("utf8"));
-        continue;
-      } catch {
-      }
-    }
-    if (part && typeof part === "object") {
-      try {
-        segments.push(JSON.stringify(part));
-      } catch {
-      }
-    }
+  const fullText = parts.map((p) => p.text || "").join("").trim();
+  if (!fullText) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Gemini returned empty response"
+    });
   }
-  return segments.join("\n").trim();
-}
-function stripCodeFences(text) {
-  if (!text) return "";
-  return text.replace(/```(?:json)?/gi, "").replace(/```/g, "").trim();
-}
-function buildTextParts(parts) {
-  const safeParts = Array.isArray(parts) && parts.length ? parts : [""];
-  return safeParts.map((part) => ({
-    text: typeof part === "string" && part.length ? part : " "
-  }));
+  return fullText;
 }
 
 async function extractPdfPages(buffer) {
@@ -2269,129 +2231,6 @@ function summarizeChunk(text) {
   const trimmed = text.trim();
   if (trimmed.length <= 150) return trimmed;
   return trimmed.slice(0, 150) + "...";
-}
-
-async function generateSectionQuestionsFromText(params) {
-  const { text, courseName, maxQuestions } = params;
-  const trimmedText = typeof text === "string" ? text.trim() : "";
-  if (!trimmedText) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: "Source text is required to generate questions."
-    });
-  }
-  const limit = clamp$1(maxQuestions != null ? maxQuestions : 10, 1, 20);
-  const systemInstruction = "You are an exam setter for Nigerian university nursing students (200 level). You write clear, accurate questions based ONLY on the source text provided.";
-  const prompt = buildPrompt(trimmedText, limit, courseName);
-  const raw = await generateGeminiText({
-    systemInstruction,
-    userParts: [prompt],
-    responseMimeType: "application/json",
-    maxOutputTokens: 1024
-  });
-  let parsed;
-  try {
-    const cleaned = stripCodeFences(raw);
-    parsed = JSON.parse(cleaned);
-  } catch (err) {
-    console.error("Failed to parse Gemini JSON for section questions", err, raw);
-    throw createError({
-      statusCode: 502,
-      statusMessage: "Gemini returned malformed JSON while generating questions."
-    });
-  }
-  return normalizePayload(parsed, limit);
-}
-function buildPrompt(text, limit, courseName) {
-  const contextLine = (courseName == null ? void 0 : courseName.trim()) ? `Course context: ${courseName.trim()}
-` : "";
-  return `${contextLine}From the text below, do three things:
-
-1. Create a short, clear TOPIC TITLE that a 200-level nursing student would immediately understand (max 10 words).
-2. Write a 1-2 sentence SUMMARY of that topic in simple language.
-3. Generate up to ${limit} exam-style questions (mix of MCQ and short-answer) based ONLY on the text.
-
-Return STRICT JSON in this exact shape:
-
-{
-  "topicTitle": "string",
-  "topicSlug": "string-with-dashes",
-  "topicSummary": "string",
-  "questions": [
-    {
-      "type": "mcq" or "short_answer",
-      "stem": "string",
-      "options": ["A", "B", "C", "D"],
-      "correctIndex": 0,
-      "correctText": "string",
-      "explanation": "string"
-    }
-  ]
-}
-
-Rules:
-* For "mcq" questions, you MUST supply 3-5 options and a valid correctIndex (0-based index into options).
-* For "short_answer" questions, set "options": [] and "correctIndex": -1 and fill "correctText" with the expected answer.
-* All questions must be answerable using ONLY the source text.
-* Do not include any markdown; only valid JSON.
-
-Source text:
-"""${text}"""`;
-}
-function normalizePayload(raw, limit) {
-  const fallbackTopic = "Study Topic";
-  const topicTitle = typeof (raw == null ? void 0 : raw.topicTitle) === "string" && raw.topicTitle.trim().length ? raw.topicTitle.trim() : fallbackTopic;
-  const slugSource = typeof (raw == null ? void 0 : raw.topicSlug) === "string" && raw.topicSlug.trim().length ? raw.topicSlug : topicTitle;
-  const topicSummary = typeof (raw == null ? void 0 : raw.topicSummary) === "string" ? raw.topicSummary.trim() : "";
-  const questionsArray = Array.isArray(raw == null ? void 0 : raw.questions) ? raw.questions : [];
-  const normalizedQuestions = questionsArray.map((question, index) => normalizeQuestion(question)).filter(Boolean).slice(0, limit);
-  return {
-    topicTitle,
-    topicSlug: slugifyTopic(slugSource),
-    topicSummary,
-    questions: normalizedQuestions
-  };
-}
-function normalizeQuestion(value, index) {
-  const stem = typeof (value == null ? void 0 : value.stem) === "string" ? value.stem.trim() : typeof (value == null ? void 0 : value.question) === "string" ? value.question.trim() : "";
-  if (!stem) return null;
-  const type = (value == null ? void 0 : value.type) === "short_answer" ? "short_answer" : "mcq";
-  const rawOptions = Array.isArray(value == null ? void 0 : value.options) ? value == null ? void 0 : value.options : Array.isArray(value == null ? void 0 : value.choices) ? value.choices : [];
-  const options = type === "mcq" ? sanitizeOptions(rawOptions) : [];
-  if (type === "mcq" && options.length < 3) {
-    return null;
-  }
-  let correctIndex = -1;
-  if (type === "mcq") {
-    const candidate = typeof (value == null ? void 0 : value.correctIndex) === "number" ? value.correctIndex : typeof (value == null ? void 0 : value.correct) === "number" ? value.correct : typeof (value == null ? void 0 : value.answer) === "number" ? value.answer : 0;
-    correctIndex = clamp$1(candidate, 0, options.length - 1);
-  }
-  const correctTextRaw = typeof (value == null ? void 0 : value.correctText) === "string" ? value.correctText : typeof (value == null ? void 0 : value.answerText) === "string" ? value.answerText : typeof (value == null ? void 0 : value.answer) === "string" ? value.answer : "";
-  const normalizedCorrectText = correctTextRaw.trim();
-  if (type === "short_answer" && !normalizedCorrectText) {
-    return null;
-  }
-  const explanation = typeof (value == null ? void 0 : value.explanation) === "string" && value.explanation.trim().length ? value.explanation.trim() : void 0;
-  return {
-    type,
-    stem,
-    options,
-    correctIndex: type === "mcq" ? correctIndex : -1,
-    correctText: type === "short_answer" ? normalizedCorrectText : normalizedCorrectText || void 0,
-    explanation
-  };
-}
-function sanitizeOptions(options) {
-  const normalized = options.map(
-    (option) => typeof option === "string" ? option.trim() : typeof option === "number" ? option.toString() : ""
-  ).filter((option) => option.length > 0).slice(0, 5);
-  return normalized;
-}
-function slugifyTopic(input) {
-  return input.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "") || "topic";
-}
-function clamp$1(value, min, max) {
-  return Math.min(Math.max(value, min), max);
 }
 
 function createServiceClient() {
@@ -2713,7 +2552,7 @@ const drill_post = defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: "Select at least one document." });
   }
   const requestedCount = typeof (body == null ? void 0 : body.count) === "number" ? body.count : DEFAULT_COUNT;
-  const targetCount = clamp(requestedCount, MIN_COUNT, MAX_COUNT);
+  const targetCount = clamp$1(requestedCount, MIN_COUNT, MAX_COUNT);
   const supabase = createServiceClient();
   const { data: docs, error: docsError } = await supabase.from("documents").select("id").eq("user_id", user.id).eq("status", "ready").in("id", docIds);
   if (docsError) {
@@ -2818,7 +2657,7 @@ function shuffle(values) {
   }
   return values;
 }
-function clamp(value, min, max) {
+function clamp$1(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 async function logDrillSession(supabase, params) {
@@ -2874,14 +2713,15 @@ const drill_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProper
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const generate_post = defineEventHandler(async (event) => {
-  var _a;
+  var _a, _b;
   const config = useRuntimeConfig();
   const body = await readBody(event);
   if (config.geminiDisabled) {
     return {
-      topicTitle: null,
-      topicSummary: null,
-      questionsInserted: 0
+      success: false,
+      docId: (body == null ? void 0 : body.docId) || null,
+      created: 0,
+      message: "Gemini is currently disabled."
     };
   }
   let userId = null;
@@ -2894,8 +2734,12 @@ const generate_post = defineEventHandler(async (event) => {
   if (!(body == null ? void 0 : body.docId) || typeof body.docId !== "string") {
     throw createError({ statusCode: 400, statusMessage: "docId is required." });
   }
-  if (!body.text || typeof body.text !== "string" || !body.text.trim()) {
-    throw createError({ statusCode: 400, statusMessage: "Section text is required." });
+  const context = typeof body.context === "string" ? body.context.trim() : "";
+  if (!context) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "context is required and must be non-empty."
+    });
   }
   const supabase = createServiceClient();
   const { data: doc, error: docError } = await supabase.from("documents").select("id, user_id, course, title").eq("id", body.docId).maybeSingle();
@@ -2906,37 +2750,56 @@ const generate_post = defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: "Document not found." });
   }
   if (userId && doc.user_id !== userId) {
-    throw createError({ statusCode: 403, statusMessage: "You do not have access to this document." });
-  }
-  try {
-    const payload = await generateSectionQuestionsFromText({
-      text: body.text,
-      courseName: body.courseName || doc.course || doc.title || void 0,
-      maxQuestions: body.maxQuestions
+    throw createError({
+      statusCode: 403,
+      statusMessage: "You do not have access to this document."
     });
-    const questionRows = payload.questions.map((question) => ({
+  }
+  const mode = body.mode === "short-answer" ? "short-answer" : "mcq";
+  const count = clamp(typeof body.count === "number" ? body.count : 5, 1, 10);
+  try {
+    const geminiResponse = await generateGeminiText({
+      systemInstruction: "You are an exam generator for Joseph Ayo Babalola University nursing students. Return ONLY strict JSON that matches the required shape.",
+      userParts: [
+        `Source context:
+
+${context}`,
+        `Generate ${count} ${mode === "mcq" ? "multiple-choice" : "short-answer"} questions using only this context.`,
+        'Format: {"questions":[{"question":"...", "options":["A","B","C","D"], "answer":0, "explanation":"..."}]} and omit any markdown or commentary.'
+      ],
+      responseMimeType: "application/json",
+      temperature: 0.2,
+      maxOutputTokens: 1024
+    });
+    const questions = normalizeGeminiQuestions(geminiResponse, mode, count);
+    if (!questions.length) {
+      throw createError({
+        statusCode: 502,
+        statusMessage: "Gemini returned no usable questions."
+      });
+    }
+    const sectionTitle = ((_b = body.sectionTitle) == null ? void 0 : _b.trim()) || doc.title || doc.course || "Generated Section";
+    const rows = questions.map((question) => ({
       id: randomUUID(),
       doc_id: body.docId,
-      section_topic: payload.topicTitle,
+      section_topic: sectionTitle,
       stem: question.stem,
       options: question.options,
-      correct: question.correctIndex,
-      explanation: question.explanation || null
+      correct: question.correct,
+      explanation: question.explanation
     }));
-    if (questionRows.length) {
-      const { error: insertError } = await supabase.from("questions").insert(questionRows);
-      if (insertError) {
-        console.error("Failed to insert generated questions", insertError);
-        throw createError({
-          statusCode: 500,
-          statusMessage: "Could not store generated questions."
-        });
-      }
+    const { error: insertError } = await supabase.from("questions").insert(rows);
+    if (insertError) {
+      console.error("Failed to insert generated questions", insertError);
+      throw createError({
+        statusCode: 500,
+        statusMessage: "Could not store generated questions."
+      });
     }
     return {
-      topicTitle: payload.topicTitle,
-      topicSummary: payload.topicSummary,
-      questionsInserted: questionRows.length
+      success: true,
+      docId: body.docId,
+      created: rows.length
     };
   } catch (err) {
     if (err == null ? void 0 : err.statusCode) {
@@ -2949,6 +2812,53 @@ const generate_post = defineEventHandler(async (event) => {
     });
   }
 });
+function normalizeGeminiQuestions(payload, mode, limit) {
+  var _a, _b, _c;
+  const rawQuestions = Array.isArray(payload == null ? void 0 : payload.questions) ? payload.questions : Array.isArray(payload) ? payload : [];
+  const normalized = [];
+  for (const raw of rawQuestions) {
+    const stemCandidate = typeof (raw == null ? void 0 : raw.stem) === "string" ? raw.stem : typeof (raw == null ? void 0 : raw.question) === "string" ? raw.question : typeof (raw == null ? void 0 : raw.prompt) === "string" ? raw.prompt : "";
+    const stem = stemCandidate.trim();
+    if (!stem) continue;
+    const explanation = typeof (raw == null ? void 0 : raw.explanation) === "string" && raw.explanation.trim().length ? raw.explanation.trim() : null;
+    const options = mode === "mcq" ? sanitizeOptions(Array.isArray(raw == null ? void 0 : raw.options) ? raw.options : (raw == null ? void 0 : raw.choices) || []) : [];
+    if (mode === "mcq" && options.length < 2) {
+      continue;
+    }
+    const answerValue = (_c = (_b = (_a = raw == null ? void 0 : raw.answer) != null ? _a : raw == null ? void 0 : raw.correct) != null ? _b : raw == null ? void 0 : raw.correctIndex) != null ? _c : raw == null ? void 0 : raw.answerIndex;
+    let correct = -1;
+    if (mode === "mcq") {
+      if (typeof answerValue === "number") {
+        correct = clamp(answerValue, 0, options.length - 1);
+      } else if (typeof answerValue === "string") {
+        const idx = options.findIndex(
+          (option) => option.toLowerCase() === answerValue.trim().toLowerCase()
+        );
+        correct = idx >= 0 ? idx : 0;
+      } else {
+        correct = 0;
+      }
+    }
+    normalized.push({
+      stem,
+      options,
+      correct,
+      explanation
+    });
+    if (normalized.length >= limit) {
+      break;
+    }
+  }
+  return normalized;
+}
+function sanitizeOptions(values) {
+  return values.map(
+    (value) => typeof value === "string" ? value.trim() : typeof value === "number" ? String(value) : ""
+  ).filter((value) => value.length > 0).slice(0, 5);
+}
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
 
 const generate_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,

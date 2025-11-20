@@ -1,25 +1,35 @@
 import { createError } from 'h3'
 
-const GEMINI_DISABLED_MESSAGE = 'Gemini is currently disabled. Please try again later.'
-
-export interface GeminiOptions {
+interface GeminiOptions {
   systemInstruction?: string
   userParts: string[]
   temperature?: number
   maxOutputTokens?: number
-  responseMimeType?: string
+  responseMimeType?: string // e.g. 'application/json' for structured output
 }
 
-export async function generateGeminiText(options: GeminiOptions) {
-  const { systemInstruction, userParts, temperature, maxOutputTokens, responseMimeType } =
-    options
+export async function generateGeminiText({
+  systemInstruction,
+  userParts,
+  temperature = 0.2,
+  maxOutputTokens = 1024,
+  responseMimeType,
+}: GeminiOptions) {
   const config = useRuntimeConfig()
+  const apiKey = config.geminiApiKey as string | undefined
+  const rawModel =
+    (config.geminiModelText as string | undefined) || 'gemini-2.5-flash'
+
+  // Normalise to full resource name "models/xxx"
+  const model = rawModel.startsWith('models/')
+    ? rawModel
+    : `models/${rawModel}`
 
   if (config.geminiDisabled) {
-    return GEMINI_DISABLED_MESSAGE
+    // Friendly offline message for when Gemini is intentionally disabled
+    return 'Gemini is currently disabled. Please try again later.'
   }
 
-  const apiKey = config.geminiApiKey as string | undefined
   if (!apiKey) {
     throw createError({
       statusCode: 500,
@@ -27,142 +37,118 @@ export async function generateGeminiText(options: GeminiOptions) {
     })
   }
 
-  const model =
-    (config.geminiModelText as string | undefined) || 'models/gemini-2.5-flash'
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent`
 
-  const payload: Record<string, any> = {
-    contents: [
-      {
-        role: 'user',
-        parts: buildTextParts(userParts),
-      },
-    ],
+  const contents = [
+    {
+      role: 'user',
+      parts: (userParts || []).map((text) => ({ text })),
+    },
+  ]
+
+  const body: any = {
+    contents,
+    generationConfig: {
+      temperature,
+      maxOutputTokens,
+    },
   }
 
-  if (systemInstruction?.trim()) {
-    payload.systemInstruction = {
+  if (responseMimeType) {
+    body.generationConfig.responseMimeType = responseMimeType
+  }
+
+  if (systemInstruction) {
+    body.systemInstruction = {
       role: 'system',
-      parts: [{ text: systemInstruction.trim() }],
+      parts: [{ text: systemInstruction }],
     }
   }
 
-  const generationConfig: Record<string, any> = {}
-  generationConfig.temperature =
-    typeof temperature === 'number' ? temperature : 0.2
-  generationConfig.maxOutputTokens =
-    typeof maxOutputTokens === 'number' ? maxOutputTokens : 1024
-  if (responseMimeType) {
-    generationConfig.responseMimeType = responseMimeType
+  let response: Response
+  try {
+    response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body: JSON.stringify(body),
+    })
+  } catch (err) {
+    console.error('Gemini text request failed (network)', err)
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Gemini request failed (network error)',
+    })
   }
-  payload.generationConfig = generationConfig
-
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey,
-    },
-    body: JSON.stringify(payload),
-  })
 
   if (!response.ok) {
     const errorText = await response.text()
-    console.error('Gemini request failed', response.status, errorText)
+    console.error('Gemini text HTTP error', response.status, errorText)
     throw createError({
       statusCode: 500,
       statusMessage: `Gemini request failed (${response.status})`,
     })
   }
 
-  let data: any
+  let payload: any
   try {
-    data = await response.json()
+    payload = await response.json()
   } catch (err) {
-    console.error('Failed to parse Gemini response JSON', err)
+    console.error('Gemini text JSON parse failed (outer payload)', err)
     throw createError({
       statusCode: 500,
-      statusMessage: 'Gemini returned invalid JSON.',
+      statusMessage: 'Gemini response was invalid JSON.',
     })
   }
 
-  const textPayload = extractGeminiText(data)
-  if (!textPayload) {
-    console.error('Gemini returned empty payload', data)
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Gemini returned empty response.',
-    })
-  }
+  const candidate = payload?.candidates?.[0]
+  const parts = candidate?.content?.parts || []
 
+  // If caller asked for JSON, return parsed JSON object
   if (responseMimeType === 'application/json') {
-    try {
-      return JSON.parse(textPayload)
-    } catch (err) {
-      console.error('Gemini JSON parse failed', err, textPayload)
+    let combined = parts
+      .map((p: any) => p.text || '')
+      .join('')
+      .trim()
+
+    if (!combined) {
       throw createError({
         statusCode: 500,
-        statusMessage: 'Gemini returned malformed JSON.',
+        statusMessage: 'Gemini returned empty JSON response',
+      })
+    }
+
+    // 1) strip ```json ... ``` fences if present
+    combined = combined.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim()
+
+    // 2) remove trailing commas before ] or }
+    combined = combined.replace(/,\s*(\]|\})/g, '$1')
+
+    try {
+      return JSON.parse(combined)
+    } catch (err) {
+      console.error('Gemini JSON content parse failed', combined, err)
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Gemini returned invalid JSON content.',
       })
     }
   }
 
-  return textPayload
-}
+  // Default: return plain text
+  const fullText = parts
+    .map((p: any) => p.text || '')
+    .join('')
+    .trim()
 
-export function extractGeminiText(payload: any) {
-  const parts = payload?.candidates?.[0]?.content?.parts
-  if (!Array.isArray(parts)) return ''
-  const segments: string[] = []
-  for (const part of parts) {
-    if (typeof part?.text === 'string') {
-      segments.push(part.text)
-      continue
-    }
-    if (part?.functionCall?.args) {
-      try {
-        segments.push(JSON.stringify(part.functionCall.args))
-        continue
-      } catch {
-        // ignore serialization failure and keep trying other formats
-      }
-    }
-    if (part?.inlineData?.data) {
-      try {
-        const decoded = Buffer.from(part.inlineData.data, 'base64').toString('utf8')
-        segments.push(decoded)
-        continue
-      } catch {
-        // ignore decode failure
-      }
-    }
-    if (part?.mimeType === 'application/json' && part?.data) {
-      try {
-        segments.push(Buffer.from(part.data, 'base64').toString('utf8'))
-        continue
-      } catch {
-        // ignore decode failure
-      }
-    }
-    if (part && typeof part === 'object') {
-      try {
-        segments.push(JSON.stringify(part))
-      } catch {
-        // ignore
-      }
-    }
+  if (!fullText) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Gemini returned empty response',
+    })
   }
-  return segments.join('\n').trim()
-}
 
-export function stripCodeFences(text: string) {
-  if (!text) return ''
-  return text.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim()
-}
-
-function buildTextParts(parts: string[]) {
-  const safeParts = Array.isArray(parts) && parts.length ? parts : ['']
-  return safeParts.map((part) => ({
-    text: typeof part === 'string' && part.length ? part : ' ',
-  }))
+  return fullText
 }
