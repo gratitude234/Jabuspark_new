@@ -23,6 +23,7 @@ create table if not exists public.documents (
   user_id uuid references auth.users(id) on delete cascade,
   title text not null,
   course text,
+  course_code text,
   kind text,
   doc_type text,
   storage_path text not null,
@@ -30,6 +31,10 @@ create table if not exists public.documents (
   chunks_count int,
   visibility text not null default 'personal' check (visibility in ('personal','course')),
   approval_status text not null default 'pending' check (approval_status in ('pending','approved','archived')),
+  level text,
+  faculty text,
+  department text,
+  is_public boolean not null default false,
   status text not null default 'processing' check (status in ('uploading','processing','ready','failed')),
   error_message text,
   size_bytes int,
@@ -70,11 +75,35 @@ create table if not exists public.drills (
 create table if not exists public.questions (
   id uuid primary key,
   drill_id uuid references public.drills(id) on delete cascade,
+  doc_id uuid references public.documents(id) on delete cascade,
+  section_topic text,
+  section_id text,
   stem text,
   options text[],
   correct int,
   explanation text,
+  difficulty text,
+  topic_tags text[],
   citations jsonb default '[]'::jsonb
+);
+
+create table if not exists public.drill_sessions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  doc_id uuid references public.documents(id) on delete cascade,
+  started_at timestamptz default now(),
+  completed_at timestamptz,
+  total_questions integer default 0,
+  correct_answers integer default 0
+);
+
+create table if not exists public.question_attempts (
+  id uuid primary key default gen_random_uuid(),
+  session_id uuid references public.drill_sessions(id) on delete cascade,
+  question_id uuid references public.questions(id) on delete cascade,
+  chosen_index integer,
+  is_correct boolean,
+  created_at timestamptz default now()
 );
 
 create table if not exists public.matches (
@@ -92,6 +121,8 @@ create index if not exists matches_doc_idx on public.matches (doc_id);
 create index if not exists sessions_user_idx on public.sessions (user_id);
 create index if not exists documents_user_idx on public.documents (user_id);
 create index if not exists doc_chunks_embedding_idx on public.doc_chunks using ivfflat (embedding vector_cosine_ops) with (lists = 100);
+create index if not exists drill_sessions_user_idx on public.drill_sessions (user_id);
+create index if not exists question_attempts_session_idx on public.question_attempts (session_id);
 
 drop trigger if exists documents_updated_at on public.documents;
 create trigger documents_updated_at
@@ -126,11 +157,23 @@ alter table public.documents
     default 'personal',
   add column if not exists approval_status text
     check (approval_status in ('pending','approved','archived'))
-    default 'pending';
+    default 'pending',
+  add column if not exists course_code text,
+  add column if not exists level text,
+  add column if not exists faculty text,
+  add column if not exists department text,
+  add column if not exists is_public boolean default false;
 alter table public.documents
   alter column visibility set not null;
 alter table public.documents
   alter column approval_status set not null;
+
+alter table public.questions
+  add column if not exists doc_id uuid references public.documents(id) on delete cascade,
+  add column if not exists section_topic text,
+  add column if not exists section_id text,
+  add column if not exists difficulty text,
+  add column if not exists topic_tags text[];
 
 alter table public.documents
   drop constraint if exists documents_status_check;

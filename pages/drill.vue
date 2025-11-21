@@ -291,7 +291,6 @@ import { useToasts } from '~/stores/useToasts'
 
 const library = useLibrary()
 const toasts = useToasts()
-const supabase = useSupabaseClient()
 const route = useRoute()
 
 const readyDocs = useReadyDocs(library)
@@ -524,12 +523,21 @@ async function submitDrill(auto = false) {
 
   if (currentDrillId.value) {
     try {
-      await supabase
-        .from('drills')
-        .update({ score: correct, accuracy: accuracy.value })
-        .eq('id', currentDrillId.value)
-    } catch {
-      // non-fatal
+      const attempts = questions.value.map((q) => ({
+        questionId: q.id,
+        choiceIndex: responses[q.id] ?? -1,
+      }))
+
+      await $fetch('/api/drill/attempts', {
+        method: 'POST',
+        body: {
+          sessionId: currentDrillId.value,
+          attempts,
+          completed: true,
+        },
+      })
+    } catch (err) {
+      console.warn('Failed to log drill attempts', err)
     }
   }
 

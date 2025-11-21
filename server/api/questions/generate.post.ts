@@ -1,16 +1,16 @@
 import { randomUUID } from 'node:crypto'
+import { createError } from 'h3'
 import { serverSupabaseUser } from '#supabase/server'
 import { createServiceClient } from '~/server/utils/supabase'
-import { generateGeminiText } from '~/server/utils/gemini'
-
-type QuestionMode = 'mcq' | 'short-answer'
+import { requireDocumentAccess } from '~/server/utils/documents'
+import { generateQuestionStems } from './stems.post'
+import { enrichQuestionStem } from './enrich.post'
 
 interface GenerateQuestionsBody {
   docId?: string
   sectionTitle?: string
   context?: string
   count?: number
-  mode?: QuestionMode
 }
 
 export default defineEventHandler(async (event) => {
@@ -46,92 +46,69 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const supabase = createServiceClient()
-  const { data: doc, error: docError } = await supabase
-    .from('documents')
-    .select('id, user_id, course, title')
-    .eq('id', body.docId)
-    .maybeSingle()
+  const { doc, supabase } = await requireDocumentAccess({
+    docId: body.docId,
+    userId,
+    supabase: createServiceClient(),
+    fields: 'id, user_id, course, title, course_code',
+  })
 
-  if (docError) {
-    throw createError({ statusCode: 500, statusMessage: docError.message })
-  }
-  if (!doc) {
-    throw createError({ statusCode: 404, statusMessage: 'Document not found.' })
-  }
-  if (userId && doc.user_id !== userId) {
-    throw createError({
-      statusCode: 403,
-      statusMessage: 'You do not have access to this document.',
-    })
-  }
-
-  const mode: QuestionMode = body.mode === 'short-answer' ? 'short-answer' : 'mcq'
   const count = clamp(typeof body.count === 'number' ? body.count : 5, 1, 10)
 
   try {
-    const geminiResponse = (await generateGeminiText({
-      systemInstruction: `
-You are an exam question generator for Joseph Ayo Babalola University nursing students.
+    const stems = await generateQuestionStems(event, {
+      docId: body.docId,
+      context,
+      count,
+    })
 
-You MUST always respond with a single valid JSON object and nothing else.
-No markdown, no code fences, no comments, no extra text.
-
-The JSON MUST match this type exactly:
-
-{
-  "questions": [
-    {
-      "question": string,
-      "options": [string, string, string, string],
-      "answer": 0 | 1 | 2 | 3,
-      "explanation": string
-    }
-  ]
-}
-
-- "question": the question stem.
-- "options": four distinct answer options for MCQ.
-- "answer": the index (0-3) of the correct option.
-- "explanation": a short explanation of the answer.
-
-Do not add any other properties. Do not wrap the JSON in backticks.
-`.trim(),
-      userParts: [
-        `Use ONLY the text below as your source material for generating questions for JABU Nursing students.\n\nCONTEXT:\n${context}`,
-        `Generate ${count} ${mode === 'mcq' ? '4-option multiple-choice' : 'short-answer'} exam-style questions.`,
-        mode === 'mcq'
-          ? 'For each question, fill "options" with four options and set "answer" to the index (0-3) of the correct one. Respond ONLY with the JSON object.'
-          : 'For each short-answer question, you may leave "options" as an empty array and set "answer" to 0. Respond ONLY with the JSON object.',
-      ],
-      responseMimeType: 'application/json',
-      temperature: 0.2,
-      maxOutputTokens: 1024,
-    })) as Record<string, any>
-
-    const questions = normalizeGeminiQuestions(geminiResponse, mode, count)
-
-    // 🔹 NEW BEHAVIOUR: if Gemini gives no usable questions, treat as success with 0 created
-    if (!questions.length) {
-      return {
-        success: true,
-        docId: body.docId,
-        created: 0,
-      }
+    if (!stems.length) {
+      return { success: true, docId: body.docId, created: 0 }
     }
 
     const sectionTitle =
-      body.sectionTitle?.trim() || doc.title || doc.course || 'Generated Section'
+      body.sectionTitle?.trim() ||
+      doc.title ||
+      doc.course ||
+      (doc as any).course_code ||
+      'Generated Section'
 
-    const rows = questions.map((question) => ({
-      id: randomUUID(),
-      doc_id: body.docId,
-      section_topic: sectionTitle,
-      stem: question.stem,
-      options: question.options,
-      correct: question.correct,
-      explanation: question.explanation,
-    }))
+    const rows: Array<{
+      id: string
+      doc_id: string
+      section_topic: string
+      stem: string
+      options: string[]
+      correct: number
+      explanation: string | null
+      difficulty: string | null
+      topic_tags: string[] | null
+    }> = []
+
+    for (const stem of stems) {
+      const enriched = await enrichQuestionStem(event, {
+        docId: body.docId,
+        stem,
+        context,
+      })
+      if (!enriched) continue
+
+      rows.push({
+        id: randomUUID(),
+        doc_id: body.docId,
+        section_topic: sectionTitle,
+        stem,
+        options: enriched.options,
+        correct: enriched.correct,
+        explanation: enriched.explanation || null,
+        difficulty: 'medium',
+        topic_tags: [],
+      })
+    }
+
+    if (!rows.length) {
+      return { success: true, docId: body.docId, created: 0 }
+    }
 
     const { error: insertError } = await supabase.from('questions').insert(rows)
     if (insertError) {
@@ -160,96 +137,6 @@ Do not add any other properties. Do not wrap the JSON in backticks.
     })
   }
 })
-
-function normalizeGeminiQuestions(
-  payload: any,
-  mode: QuestionMode,
-  limit: number,
-) {
-  const rawQuestions = Array.isArray(payload?.questions)
-    ? payload.questions
-    : Array.isArray(payload)
-      ? payload
-      : []
-
-  const normalized: Array<{
-    stem: string
-    options: string[]
-    correct: number
-    explanation: string | null
-  }> = []
-
-  for (const raw of rawQuestions) {
-    const stemCandidate =
-      typeof raw?.stem === 'string'
-        ? raw.stem
-        : typeof raw?.question === 'string'
-          ? raw.question
-          : typeof raw?.prompt === 'string'
-            ? raw.prompt
-            : ''
-
-    const stem = stemCandidate.trim()
-    if (!stem) continue
-
-    const explanation =
-      typeof raw?.explanation === 'string' && raw.explanation.trim().length
-        ? raw.explanation.trim()
-        : null
-
-    const options =
-      mode === 'mcq'
-        ? sanitizeOptions(Array.isArray(raw?.options) ? raw.options : raw?.choices || [])
-        : []
-
-    if (mode === 'mcq' && options.length < 2) {
-      continue
-    }
-
-    const answerValue =
-      raw?.answer ?? raw?.correct ?? raw?.correctIndex ?? raw?.answerIndex
-
-    let correct = -1
-    if (mode === 'mcq') {
-      if (typeof answerValue === 'number') {
-        correct = clamp(answerValue, 0, options.length - 1)
-      } else if (typeof answerValue === 'string') {
-        const idx = options.findIndex(
-          (option) => option.toLowerCase() === answerValue.trim().toLowerCase(),
-        )
-        correct = idx >= 0 ? idx : 0
-      } else {
-        correct = 0
-      }
-    }
-
-    normalized.push({
-      stem,
-      options,
-      correct,
-      explanation,
-    })
-
-    if (normalized.length >= limit) {
-      break
-    }
-  }
-
-  return normalized
-}
-
-function sanitizeOptions(values: unknown[]) {
-  return values
-    .map((value) =>
-      typeof value === 'string'
-        ? value.trim()
-        : typeof value === 'number'
-          ? String(value)
-          : '',
-    )
-    .filter((value) => value.length > 0)
-    .slice(0, 5)
-}
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)

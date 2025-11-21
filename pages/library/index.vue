@@ -98,6 +98,36 @@
           </div>
         </div>
 
+        <!-- Course code + level filters -->
+        <div class="grid gap-3 sm:grid-cols-2">
+          <label class="flex flex-col gap-1 text-xs text-slate-400">
+            <span class="whitespace-nowrap">Course code</span>
+            <input
+              v-model="courseCodeFilter"
+              type="text"
+              placeholder="e.g. ANA 203"
+              class="h-9 rounded-full border border-borderSubtle bg-background px-3 text-xs text-slate-100 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+            />
+          </label>
+
+          <label class="flex flex-col gap-1 text-xs text-slate-400">
+            <span class="whitespace-nowrap">Level</span>
+            <select
+              v-model="levelFilter"
+              class="h-9 rounded-full border border-borderSubtle bg-background px-3 text-xs text-slate-100 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+            >
+              <option value="all">All levels</option>
+              <option
+                v-for="level in levelOptions"
+                :key="level"
+                :value="level"
+              >
+                {{ level }}
+              </option>
+            </select>
+          </label>
+        </div>
+
         <!-- Course filter (only for course tab) -->
         <div
           v-if="sourceTab === 'course'"
@@ -216,10 +246,34 @@
                   {{ doc.course }}
                 </span>
                 <span
+                  v-if="(doc as any).course_code && (doc as any).course_code !== doc.course"
+                  class="inline-flex items-center rounded-full bg-background px-2.5 py-1 text-primary"
+                >
+                  {{ (doc as any).course_code }}
+                </span>
+                <span
                   class="inline-flex items-center rounded-full px-2.5 py-1"
                   :class="statusBadgeClass(doc)"
                 >
                   {{ statusLabel(doc) }}
+                </span>
+                <span
+                  v-if="(doc as any).level"
+                  class="inline-flex items-center rounded-full bg-background px-2.5 py-1"
+                >
+                  {{ (doc as any).level }}
+                </span>
+                <span
+                  v-if="(doc as any).faculty || (doc as any).department"
+                  class="inline-flex items-center rounded-full bg-background px-2.5 py-1"
+                >
+                  {{ (doc as any).faculty || (doc as any).department }}
+                </span>
+                <span
+                  v-if="(doc as any).is_public"
+                  class="inline-flex items-center rounded-full bg-accent/10 px-2.5 py-1 text-accent"
+                >
+                  Shared
                 </span>
                 <span
                   v-if="(doc as any).pages_count"
@@ -293,6 +347,8 @@ const sourceTab = ref<'course' | 'personal'>('course')
 const search = ref('')
 const statusFilter = ref<'all' | 'ready' | 'processing' | 'failed'>('all')
 const courseFilter = ref<'all' | string>('all')
+const courseCodeFilter = ref('')
+const levelFilter = ref<'all' | string>('all')
 
 const statusOptions = [
   { value: 'all' as const, label: 'All' },
@@ -300,6 +356,8 @@ const statusOptions = [
   { value: 'processing' as const, label: 'Processing' },
   { value: 'failed' as const, label: 'Failed' },
 ]
+
+const levelOptions = ['100L', '200L', '300L', '400L', '500L']
 
 onMounted(async () => {
   try {
@@ -357,10 +415,31 @@ const filteredDocs = computed<DocumentRow[]>(() => {
       return false
     }
 
+    // Course code filter
+    const courseCode = ((doc as any).course_code || doc.course || '').toLowerCase()
+    const courseFilterTerm = courseCodeFilter.value.trim().toLowerCase()
+    if (courseFilterTerm && !courseCode.includes(courseFilterTerm)) {
+      return false
+    }
+
+    // Level filter
+    const levelValue = ((doc as any).level || '').toString().toLowerCase()
+    if (levelFilter.value !== 'all' && levelValue !== levelFilter.value.toLowerCase()) {
+      return false
+    }
+
     // Search filter
     if (!term) return true
 
-    const haystack = [doc.title || '', doc.course || '', (doc as any).kind || '']
+    const haystack =
+      [
+        doc.title || '',
+        doc.course || '',
+        (doc as any).course_code || '',
+        (doc as any).faculty || '',
+        (doc as any).department || '',
+        (doc as any).kind || '',
+      ]
       .join(' ')
       .toLowerCase()
 
