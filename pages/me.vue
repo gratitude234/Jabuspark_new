@@ -105,13 +105,13 @@
           class="space-y-1 border border-borderSubtle bg-surface/90 shadow-sm shadow-background/30"
         >
           <p class="text-[11px] uppercase tracking-[0.16em] text-slate-500">
-            Drills taken
+            Questions answered
           </p>
           <p class="text-2xl font-bold">
-            {{ stats.drills }}
+            {{ stats.totalAnswered }}
           </p>
           <p class="text-[11px] text-slate-500">
-            Completed sessions
+            Recorded attempts
           </p>
         </Card>
 
@@ -119,7 +119,7 @@
           class="space-y-1 border border-borderSubtle bg-surface/90 shadow-sm shadow-background/30"
         >
           <p class="text-[11px] uppercase tracking-[0.16em] text-slate-500">
-            Avg accuracy
+            Accuracy
           </p>
           <p class="text-2xl font-bold text-success">
             {{ stats.accuracy }}%
@@ -133,13 +133,13 @@
           class="space-y-1 border border-borderSubtle bg-surface/90 shadow-sm shadow-background/30"
         >
           <p class="text-[11px] uppercase tracking-[0.16em] text-slate-500">
-            Best accuracy
+            Last 7 days
           </p>
           <p class="text-2xl font-bold text-primary-soft">
-            {{ stats.bestAccuracy }}%
+            {{ stats.last7 }}
           </p>
           <p class="text-[11px] text-slate-500">
-            Top performance
+            Attempts in the past week
           </p>
         </Card>
       </section>
@@ -245,9 +245,10 @@ const auth = useAuth()
 const client = useSupabaseClient()
 
 const stats = reactive({
-  drills: 0,
+  totalAnswered: 0,
+  correct: 0,
   accuracy: 0,
-  bestAccuracy: 0,
+  last7: 0,
 })
 
 const GOALS_KEY = 'jabuspark:me:goals'
@@ -378,7 +379,7 @@ const goalsSummary = computed(() => {
 })
 
 const statsMessage = computed(() => {
-  if (stats.drills === 0) {
+  if (stats.totalAnswered === 0) {
     return 'No drills yet – run your first Quick Drill from the home page.'
   }
   if (stats.accuracy < 50) {
@@ -417,9 +418,10 @@ watch(
     if (next && next !== prev) {
       await fetchStats()
     } else if (!next) {
-      stats.drills = 0
+      stats.totalAnswered = 0
+      stats.correct = 0
       stats.accuracy = 0
-      stats.bestAccuracy = 0
+      stats.last7 = 0
     }
   },
 )
@@ -428,22 +430,85 @@ watch(goals, saveGoals, { deep: true })
 
 async function fetchStats() {
   if (!auth.user) return
-  const { data } = await client
+  try {
+    const { data: sessions, error: sessionsError } = await client
+      .from('drill_sessions')
+      .select('id')
+      .eq('user_id', auth.user.id)
+
+    if (sessionsError) {
+      if (sessionsError.code === '42P01') {
+        // fall back to legacy drills table
+        await fetchLegacyStats()
+        return
+      }
+      throw sessionsError
+    }
+
+    const sessionIds = (sessions || []).map((row) => row.id).filter(Boolean)
+    if (!sessionIds.length) {
+      stats.totalAnswered = 0
+      stats.correct = 0
+      stats.accuracy = 0
+      stats.last7 = 0
+      return
+    }
+
+    const { data: attempts, error: attemptsError } = await client
+      .from('question_attempts')
+      .select('is_correct, created_at')
+      .in('session_id', sessionIds)
+
+    if (attemptsError) {
+      if (attemptsError.code === '42P01') {
+        await fetchLegacyStats()
+        return
+      }
+      throw attemptsError
+    }
+
+    const totalAnswered = attempts?.length || 0
+    const correct = (attempts || []).filter((row) => row.is_correct).length
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - 7)
+    const last7 = (attempts || []).filter((row) => {
+      const ts = row?.created_at ? new Date(row.created_at) : null
+      return ts != null && ts >= cutoff
+    }).length
+
+    stats.totalAnswered = totalAnswered
+    stats.correct = correct
+    stats.accuracy = totalAnswered ? Math.round((correct / totalAnswered) * 100) : 0
+    stats.last7 = last7
+  } catch (err) {
+    console.warn('Failed to fetch drill stats', err)
+  }
+}
+
+async function fetchLegacyStats() {
+  const { data, error } = await client
     .from('drills')
     .select('score, accuracy')
     .eq('user_id', auth.user.id)
 
-  stats.drills = data?.length || 0
+  if (error) {
+    console.warn('Legacy drills stats failed', error.message)
+    return
+  }
+
+  stats.totalAnswered = data?.length || 0
 
   if (data && data.length) {
     const accuracies = data.map((row) => row.accuracy || 0)
     const avg =
       accuracies.reduce((sum, a) => sum + a, 0) / (accuracies.length || 1)
     stats.accuracy = Math.round(avg)
-    stats.bestAccuracy = Math.round(Math.max(...accuracies))
+    stats.correct = data.map((row) => row.score || 0).reduce((a, b) => a + b, 0)
+    stats.last7 = 0
   } else {
     stats.accuracy = 0
-    stats.bestAccuracy = 0
+    stats.correct = 0
+    stats.last7 = 0
   }
 }
 

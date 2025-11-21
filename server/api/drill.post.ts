@@ -1,4 +1,6 @@
 // Drill sessions now read from pre-generated question pools so students get consistent questions per document batch.
+import { randomUUID } from 'node:crypto'
+import { createError } from 'h3'
 import { serverSupabaseUser } from '#supabase/server'
 import type { DrillQuestion } from '~/types/models'
 import { createServiceClient } from '~/server/utils/supabase'
@@ -107,7 +109,6 @@ export default defineEventHandler(async (event) => {
     userId: user.id,
     docIds: verifiedDocIds,
     questionCount: mapped.length,
-    difficulty,
   })
 
   return {
@@ -195,40 +196,30 @@ function clamp(value: number, min: number, max: number) {
 
 async function logDrillSession(
   supabase: ReturnType<typeof createServiceClient>,
-  params: { userId: string; docIds: string[]; questionCount: number; difficulty: 'easy' | 'mixed' | 'hard' },
+  params: { userId: string; docIds: string[]; questionCount: number },
 ) {
   try {
-    const basePayload: Record<string, any> = {
+    const payload = {
+      id: randomUUID(),
       user_id: params.userId,
-      doc_ids: params.docIds,
-      question_count: params.questionCount,
-    }
-    if (params.difficulty && params.difficulty !== 'mixed') {
-      basePayload.difficulty = params.difficulty
+      doc_id: params.docIds[0] || null,
+      started_at: new Date().toISOString(),
+      total_questions: params.questionCount,
+      correct_answers: 0,
     }
 
-    const { data, error } = await supabase.from('drills').insert(basePayload).select('id').maybeSingle()
+    const { data, error } = await supabase
+      .from('drill_sessions')
+      .insert(payload)
+      .select('id')
+      .maybeSingle()
+
     if (!error) {
-      return data?.id ?? null
-    }
-    if (error.code === '42703' && 'difficulty' in basePayload) {
-      delete basePayload.difficulty
-      const retry = await supabase.from('drills').insert(basePayload).select('id').maybeSingle()
-      if (!retry.error) {
-        return retry.data?.id ?? null
-      }
-      if (retry.error?.code === '42P01') {
-        console.warn('drills table missing; skipping drill session logging.')
-        return null
-      }
-      if (retry.error) {
-        console.error('Failed to log drill session after retry', retry.error)
-        return null
-      }
+      return data?.id ?? payload.id
     }
     if (error.code === '42P01') {
-      console.warn('drills table missing; skipping drill session logging.')
-      return null
+      console.warn('drill_sessions table missing; falling back to legacy drills table.')
+      return await legacyLogDrillSession(supabase, params)
     }
     console.error('Failed to log drill session', error)
     return null
@@ -236,6 +227,28 @@ async function logDrillSession(
     console.error('Unexpected drill session logging failure', err)
     return null
   }
+}
+
+async function legacyLogDrillSession(
+  supabase: ReturnType<typeof createServiceClient>,
+  params: { userId: string; docIds: string[]; questionCount: number },
+) {
+  const basePayload: Record<string, any> = {
+    user_id: params.userId,
+    doc_ids: params.docIds,
+    question_count: params.questionCount,
+  }
+
+  const { data, error } = await supabase.from('drills').insert(basePayload).select('id').maybeSingle()
+  if (!error) {
+    return data?.id ?? null
+  }
+  if (error.code === '42P01') {
+    console.warn('drills table missing; skipping drill session logging.')
+    return null
+  }
+  console.error('Failed to log drill session', error)
+  return null
 }
 
 function normalizeDifficulty(value?: string | null): 'easy' | 'mixed' | 'hard' {

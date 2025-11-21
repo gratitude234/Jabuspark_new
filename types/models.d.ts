@@ -5,6 +5,7 @@ export interface DocumentRow {
   user_id: string
   title: string
   course: string | null
+  course_code?: string | null
   kind: string | null
   storage_path: string
   pages_count: number | null
@@ -12,6 +13,10 @@ export interface DocumentRow {
   visibility?: 'personal' | 'course' | (string & {}) | null
   approval_status?: 'pending' | 'approved' | 'archived' | 'rejected' | (string & {}) | null
   doc_type?: string | null
+  level?: string | null
+  faculty?: string | null
+  department?: string | null
+  is_public?: boolean | null
   status: DocumentStatus
   error_message: string | null
   size_bytes: number | null
