@@ -27,7 +27,7 @@ export const useLibrary = defineStore('library', {
       const client = useSupabaseClient()
       const { data, error } = await client
         .from('documents')
-        .select('*')
+        .select('*, courses:course_id(id, code, title, level)')
         .order('updated_at', { ascending: false })
       this.loading = false
       if (error) {

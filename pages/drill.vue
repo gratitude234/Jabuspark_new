@@ -161,13 +161,76 @@
         </p>
       </div>
 
-      <Button
-        class="w-full bg-accent text-background hover:bg-accent/90 disabled:opacity-60"
-        :disabled="loading || !readyDocs.length"
-        @click="startDrill"
-      >
-        {{ loading ? 'Generating…' : 'Start drill' }}
-      </Button>
+      <div class="space-y-2">
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+          Mode
+        </p>
+        <div class="inline-flex rounded-full border border-borderSubtle bg-background p-1 text-[11px] font-semibold uppercase tracking-[0.14em]">
+          <button
+            type="button"
+            class="rounded-full px-3 py-1 transition"
+            :class="
+              mode.value === 'normal'
+                ? 'bg-primary text-background shadow-sm shadow-primary/40'
+                : 'text-slate-400 hover:text-primary-soft'
+            "
+            @click="mode.value = 'normal'"
+          >
+            Normal
+          </button>
+          <button
+            type="button"
+            class="rounded-full px-3 py-1 transition"
+            :class="
+              mode.value === 'review'
+                ? 'bg-accent text-background shadow-sm shadow-accent/40'
+                : 'text-slate-400 hover:text-accent'
+            "
+            @click="mode.value = 'review'"
+          >
+            Review mistakes
+          </button>
+        </div>
+        <p class="text-[11px] text-slate-500">
+          Review mode pulls questions you missed before. Keep a doc selected to focus.
+        </p>
+      </div>
+
+    <Button
+      class="w-full bg-accent text-background hover:bg-accent/90 disabled:opacity-60"
+      :disabled="loading || !readyDocs.length"
+      @click="startDrill"
+    >
+      {{ loading ? 'Generating…' : 'Start drill' }}
+    </Button>
+    </Card>
+
+    <Card
+      class="space-y-2 border border-borderSubtle bg-surface/95 shadow-sm shadow-background/40"
+    >
+      <div class="flex items-center justify-between text-xs text-slate-400">
+        <p class="font-semibold uppercase tracking-[0.14em]">Leaderboard</p>
+        <span class="text-[11px]">Last 7 days</span>
+      </div>
+      <div v-if="!leaderboard.length" class="text-[11px] text-slate-500">
+        No attempts recorded yet.
+      </div>
+      <div v-else class="space-y-1 text-[12px] text-slate-200">
+        <div
+          v-for="(entry, idx) in leaderboard"
+          :key="entry.userId"
+          class="flex items-center justify-between rounded-lg border border-borderSubtle bg-background px-3 py-2"
+        >
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] text-slate-500">#{{ idx + 1 }}</span>
+            <div>
+              <p class="text-sm font-semibold">{{ entry.name || 'Anonymous' }}</p>
+              <p class="text-[11px] text-slate-500">{{ entry.total }} questions</p>
+            </div>
+          </div>
+          <p class="text-sm font-semibold text-success">{{ entry.accuracy }}%</p>
+        </div>
+      </div>
     </Card>
 
     <!-- Active drill -->
@@ -304,6 +367,7 @@ const difficultyOptions: Array<{ label: string; value: 'easy' | 'mixed' | 'hard'
 const selectedDocs = ref<string[]>([])
 const count = ref(10)
 const duration = ref(15)
+const mode = ref<'normal' | 'review'>('normal')
 const loading = ref(false)
 const questions = ref<DrillQuestion[]>([])
 const responses = reactive<Record<string, number | null>>({})
@@ -312,6 +376,9 @@ const score = ref(0)
 const accuracy = ref(0)
 const missedQuestions = ref<string[]>([])
 const currentDrillId = ref<string | null>(null)
+const leaderboard = ref<
+  { userId: string; name: string | null; total: number; correct: number; accuracy: number }[]
+>([])
 
 // Timer
 const timeRemaining = ref<number>(0)
@@ -357,6 +424,7 @@ const formattedTime = computed(() => {
 onMounted(async () => {
   await library.loadDocuments()
   applyRoutePreset()
+  await fetchLeaderboard()
 })
 
 watch(
@@ -365,6 +433,13 @@ watch(
     if (!presetApplied.value) {
       applyRoutePreset()
     }
+  },
+)
+
+watch(
+  () => selectedDocs.value.join(','),
+  () => {
+    fetchLeaderboard()
   },
 )
 
@@ -430,6 +505,17 @@ function clearTimer() {
   }
 }
 
+async function fetchLeaderboard() {
+  try {
+    const doc = readyDocs.value.find((d) => selectedDocs.value.includes(d.id))
+    const query = doc?.course_id ? { courseId: doc.course_id } : undefined
+    const data = await $fetch<typeof leaderboard.value>('/api/leaderboard', { query })
+    leaderboard.value = data || []
+  } catch (err) {
+    console.warn('Failed to load leaderboard', err)
+  }
+}
+
 async function startDrill() {
   if (!readyDocs.value.length) {
     toasts.error('Upload and ingest a PDF first.')
@@ -461,9 +547,15 @@ async function startDrill() {
         ? selectedDocs.value
         : readyDocs.value.map((doc) => doc.id)
 
-    const payload: any = await $fetch('/api/drill', {
+    const endpoint = mode.value === 'review' ? '/api/drill/review' : '/api/drill'
+    const body: any =
+      mode.value === 'review'
+        ? { docId: docIds[0] || null, limit: count.value }
+        : { docIds, count: count.value, difficulty: difficulty.value }
+
+    const payload: any = await $fetch(endpoint, {
       method: 'POST',
-      body: { docIds, count: count.value, difficulty: difficulty.value },
+      body,
     })
 
     questions.value = payload.questions || []

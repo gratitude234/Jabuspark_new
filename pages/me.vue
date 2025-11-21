@@ -148,6 +148,26 @@
         {{ statsMessage }}
       </p>
 
+      <section v-if="weakAreas.length" class="space-y-3">
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+          Weak areas
+        </p>
+        <div class="space-y-2">
+          <Card
+            v-for="area in weakAreas"
+            :key="`${area.courseId || 'none'}-${area.topic}`"
+            class="space-y-1 border border-borderSubtle bg-surface/95 shadow-sm shadow-background/30"
+          >
+            <p class="text-sm font-semibold text-slate-100">
+              {{ area.courseCode || 'Course' }} · {{ area.topic }}
+            </p>
+            <p class="text-[11px] text-slate-400">
+              Accuracy {{ area.accuracy }}% from {{ area.attempts }} attempts
+            </p>
+          </Card>
+        </div>
+      </section>
+
       <!-- Simple goals (local only for now) -->
       <section class="space-y-3">
         <p
@@ -250,6 +270,17 @@ const stats = reactive({
   accuracy: 0,
   last7: 0,
 })
+const weakAreas = ref<
+  {
+    courseId: string | null
+    courseCode: string | null
+    courseTitle: string | null
+    topic: string
+    attempts: number
+    correct: number
+    accuracy: number
+  }[]
+>([])
 
 const GOALS_KEY = 'jabuspark:me:goals'
 
@@ -408,7 +439,10 @@ const goalsProgress = computed(() => {
 
 onMounted(async () => {
   await auth.init()
-  if (auth.user) await fetchStats()
+  if (auth.user) {
+    await fetchStats()
+    await fetchWeakAreas()
+  }
   loadGoals()
 })
 
@@ -417,6 +451,7 @@ watch(
   async (next, prev) => {
     if (next && next !== prev) {
       await fetchStats()
+      await fetchWeakAreas()
     } else if (!next) {
       stats.totalAnswered = 0
       stats.correct = 0

@@ -151,6 +151,26 @@
           </select>
         </div>
 
+        <div
+          v-if="coursesStore.myCourses.length"
+          class="flex items-center gap-2 text-xs text-slate-400"
+        >
+          <span class="whitespace-nowrap">My courses</span>
+          <select
+            v-model="selectedCourseId"
+            class="h-9 flex-1 rounded-full border border-borderSubtle bg-background px-3 text-xs text-slate-100 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+          >
+            <option :value="null">All</option>
+            <option
+              v-for="course in coursesStore.myCourses"
+              :key="course.id"
+              :value="course.id"
+            >
+              {{ course.code }} — {{ course.title }}
+            </option>
+          </select>
+        </div>
+
         <!-- Summary line -->
         <p class="text-[11px] text-slate-500">
           Showing
@@ -240,7 +260,13 @@
               </p>
               <div class="flex flex-wrap gap-2 text-[11px] text-slate-400">
                 <span
-                  v-if="doc.course"
+                  v-if="(doc as any).courses?.code"
+                  class="inline-flex items-center rounded-full bg-background px-2.5 py-1 text-primary-soft"
+                >
+                  {{ (doc as any).courses.code }}
+                </span>
+                <span
+                  v-else-if="doc.course"
                   class="inline-flex items-center rounded-full bg-background px-2.5 py-1 text-primary-soft"
                 >
                   {{ doc.course }}
@@ -336,10 +362,12 @@
 import Card from '~/components/Card.vue'
 import type { DocumentRow } from '~/types/models'
 import { useToasts } from '~/stores/useToasts'
+import { useCourses } from '~/stores/useCourses'
 
 const library = useLibrary()
 const router = useRouter()
 const toasts = useToasts()
+const coursesStore = useCourses()
 
 const docsLoading = ref(true)
 
@@ -363,6 +391,8 @@ onMounted(async () => {
   try {
     docsLoading.value = true
     await library.loadDocuments()
+    await coursesStore.fetchCourses()
+    await coursesStore.fetchMyCourses()
   } catch (err: any) {
     toasts.error(err?.message || 'Failed to load documents.')
   } finally {
@@ -387,14 +417,20 @@ const courseOptions = computed<string[]>(() => {
   const set = new Set<string>()
   courseDocs.value.forEach((doc) => {
     if (doc.course) set.add(doc.course)
+    const linked = (doc as any).courses?.code
+    if (linked) set.add(linked)
   })
   return Array.from(set).sort()
 })
 
 // Docs for current tab (before search/filters)
-const baseDocs = computed<DocumentRow[]>(() =>
-  sourceTab.value === 'course' ? courseDocs.value : personalDocs.value,
-)
+const baseDocs = computed<DocumentRow[]>(() => {
+  const docs = sourceTab.value === 'course' ? courseDocs.value : personalDocs.value
+  if (selectedCourseId.value) {
+    return docs.filter((doc) => (doc as any).course_id === selectedCourseId.value)
+  }
+  return docs
+})
 
 // Filtered docs
 const filteredDocs = computed<DocumentRow[]>(() => {

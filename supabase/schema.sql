@@ -18,6 +18,27 @@ create table if not exists public.profiles (
   created_at timestamptz default now()
 );
 
+create table if not exists public.courses (
+  id uuid primary key default gen_random_uuid(),
+  code text not null,
+  title text not null,
+  level text,
+  faculty text,
+  department text,
+  created_by uuid references auth.users(id) on delete set null,
+  is_active boolean not null default true,
+  is_public boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.course_enrolments (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  course_id uuid not null references public.courses(id) on delete cascade,
+  level text,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.documents (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete cascade,
