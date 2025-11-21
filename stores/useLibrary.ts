@@ -27,7 +27,7 @@ export const useLibrary = defineStore('library', {
       const client = useSupabaseClient()
       const { data, error } = await client
         .from('documents')
-        .select('*')
+        .select('*, courses:course_id(id, code, title, level)')
         .order('updated_at', { ascending: false })
       this.loading = false
       if (error) {
@@ -38,7 +38,17 @@ export const useLibrary = defineStore('library', {
     },
     async uploadDocument(
       file: File,
-      options?: { visibility?: 'personal' | 'course'; course?: string | null; docType?: string | null },
+      options?: {
+        visibility?: 'personal' | 'course'
+        course?: string | null
+        docType?: string | null
+        courseCode?: string | null
+        level?: string | null
+        faculty?: string | null
+        department?: string | null
+        isPublic?: boolean | null
+        courseId?: string | null
+      },
     ) {
       const auth = useAuth()
       if (!auth.user) throw new Error('Sign in required')
@@ -49,6 +59,12 @@ export const useLibrary = defineStore('library', {
       const visibility = options?.visibility ?? 'personal'
       const course = options?.course ?? null
       const docType = options?.docType ?? null
+      const courseCode = options?.courseCode ?? course
+      const level = options?.level ?? null
+      const faculty = options?.faculty ?? null
+      const department = options?.department ?? null
+      const isPublic = options?.isPublic ?? false
+      const courseId = options?.courseId ?? null
       const approvalStatus = visibility === 'course' ? 'pending' : 'approved'
       const { error: storageError } = await client.storage.from('docs').upload(path, file, {
         upsert: true,
@@ -62,6 +78,7 @@ export const useLibrary = defineStore('library', {
           user_id: auth.user.id,
           title: file.name.replace(/\.pdf$/i, ''),
           course,
+          course_code: courseCode,
           kind: null,
           doc_type: docType,
           storage_path: path,
@@ -69,6 +86,11 @@ export const useLibrary = defineStore('library', {
           chunks_count: null,
           visibility,
           approval_status: approvalStatus,
+          course_id: courseId,
+          level,
+          faculty,
+          department,
+          is_public: isPublic,
           status: 'uploading',
           error_message: null,
           size_bytes: file.size,

@@ -98,6 +98,36 @@
           </div>
         </div>
 
+        <!-- Course code + level filters -->
+        <div class="grid gap-3 sm:grid-cols-2">
+          <label class="flex flex-col gap-1 text-xs text-slate-400">
+            <span class="whitespace-nowrap">Course code</span>
+            <input
+              v-model="courseCodeFilter"
+              type="text"
+              placeholder="e.g. ANA 203"
+              class="h-9 rounded-full border border-borderSubtle bg-background px-3 text-xs text-slate-100 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+            />
+          </label>
+
+          <label class="flex flex-col gap-1 text-xs text-slate-400">
+            <span class="whitespace-nowrap">Level</span>
+            <select
+              v-model="levelFilter"
+              class="h-9 rounded-full border border-borderSubtle bg-background px-3 text-xs text-slate-100 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+            >
+              <option value="all">All levels</option>
+              <option
+                v-for="level in levelOptions"
+                :key="level"
+                :value="level"
+              >
+                {{ level }}
+              </option>
+            </select>
+          </label>
+        </div>
+
         <!-- Course filter (only for course tab) -->
         <div
           v-if="sourceTab === 'course'"
@@ -117,6 +147,26 @@
               :value="c"
             >
               {{ c }}
+            </option>
+          </select>
+        </div>
+
+        <div
+          v-if="coursesStore.myCourses.length"
+          class="flex items-center gap-2 text-xs text-slate-400"
+        >
+          <span class="whitespace-nowrap">My courses</span>
+          <select
+            v-model="selectedCourseId"
+            class="h-9 flex-1 rounded-full border border-borderSubtle bg-background px-3 text-xs text-slate-100 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+          >
+            <option :value="null">All</option>
+            <option
+              v-for="course in coursesStore.myCourses"
+              :key="course.id"
+              :value="course.id"
+            >
+              {{ course.code }} — {{ course.title }}
             </option>
           </select>
         </div>
@@ -210,16 +260,46 @@
               </p>
               <div class="flex flex-wrap gap-2 text-[11px] text-slate-400">
                 <span
-                  v-if="doc.course"
+                  v-if="(doc as any).courses?.code"
+                  class="inline-flex items-center rounded-full bg-background px-2.5 py-1 text-primary-soft"
+                >
+                  {{ (doc as any).courses.code }}
+                </span>
+                <span
+                  v-else-if="doc.course"
                   class="inline-flex items-center rounded-full bg-background px-2.5 py-1 text-primary-soft"
                 >
                   {{ doc.course }}
+                </span>
+                <span
+                  v-if="(doc as any).course_code && (doc as any).course_code !== doc.course"
+                  class="inline-flex items-center rounded-full bg-background px-2.5 py-1 text-primary"
+                >
+                  {{ (doc as any).course_code }}
                 </span>
                 <span
                   class="inline-flex items-center rounded-full px-2.5 py-1"
                   :class="statusBadgeClass(doc)"
                 >
                   {{ statusLabel(doc) }}
+                </span>
+                <span
+                  v-if="(doc as any).level"
+                  class="inline-flex items-center rounded-full bg-background px-2.5 py-1"
+                >
+                  {{ (doc as any).level }}
+                </span>
+                <span
+                  v-if="(doc as any).faculty || (doc as any).department"
+                  class="inline-flex items-center rounded-full bg-background px-2.5 py-1"
+                >
+                  {{ (doc as any).faculty || (doc as any).department }}
+                </span>
+                <span
+                  v-if="(doc as any).is_public"
+                  class="inline-flex items-center rounded-full bg-accent/10 px-2.5 py-1 text-accent"
+                >
+                  Shared
                 </span>
                 <span
                   v-if="(doc as any).pages_count"
@@ -282,10 +362,12 @@
 import Card from '~/components/Card.vue'
 import type { DocumentRow } from '~/types/models'
 import { useToasts } from '~/stores/useToasts'
+import { useCourses } from '~/stores/useCourses'
 
 const library = useLibrary()
 const router = useRouter()
 const toasts = useToasts()
+const coursesStore = useCourses()
 
 const docsLoading = ref(true)
 
@@ -293,6 +375,12 @@ const sourceTab = ref<'course' | 'personal'>('course')
 const search = ref('')
 const statusFilter = ref<'all' | 'ready' | 'processing' | 'failed'>('all')
 const courseFilter = ref<'all' | string>('all')
+const courseCodeFilter = ref('')
+const levelFilter = ref<'all' | string>('all')
+const selectedCourseId = computed({
+  get: () => coursesStore.selectedCourseId,
+  set: (value) => coursesStore.selectCourse(value),
+})
 
 const statusOptions = [
   { value: 'all' as const, label: 'All' },
@@ -301,10 +389,14 @@ const statusOptions = [
   { value: 'failed' as const, label: 'Failed' },
 ]
 
+const levelOptions = ['100L', '200L', '300L', '400L', '500L']
+
 onMounted(async () => {
   try {
     docsLoading.value = true
     await library.loadDocuments()
+    await coursesStore.fetchCourses()
+    await coursesStore.fetchMyCourses()
   } catch (err: any) {
     toasts.error(err?.message || 'Failed to load documents.')
   } finally {
@@ -329,14 +421,20 @@ const courseOptions = computed<string[]>(() => {
   const set = new Set<string>()
   courseDocs.value.forEach((doc) => {
     if (doc.course) set.add(doc.course)
+    const linked = (doc as any).courses?.code
+    if (linked) set.add(linked)
   })
   return Array.from(set).sort()
 })
 
 // Docs for current tab (before search/filters)
-const baseDocs = computed<DocumentRow[]>(() =>
-  sourceTab.value === 'course' ? courseDocs.value : personalDocs.value,
-)
+const baseDocs = computed<DocumentRow[]>(() => {
+  const docs = sourceTab.value === 'course' ? courseDocs.value : personalDocs.value
+  if (selectedCourseId.value) {
+    return docs.filter((doc) => (doc as any).course_id === selectedCourseId.value)
+  }
+  return docs
+})
 
 // Filtered docs
 const filteredDocs = computed<DocumentRow[]>(() => {
@@ -357,10 +455,31 @@ const filteredDocs = computed<DocumentRow[]>(() => {
       return false
     }
 
+    // Course code filter
+    const courseCode = ((doc as any).course_code || doc.course || '').toLowerCase()
+    const courseFilterTerm = courseCodeFilter.value.trim().toLowerCase()
+    if (courseFilterTerm && !courseCode.includes(courseFilterTerm)) {
+      return false
+    }
+
+    // Level filter
+    const levelValue = ((doc as any).level || '').toString().toLowerCase()
+    if (levelFilter.value !== 'all' && levelValue !== levelFilter.value.toLowerCase()) {
+      return false
+    }
+
     // Search filter
     if (!term) return true
 
-    const haystack = [doc.title || '', doc.course || '', (doc as any).kind || '']
+    const haystack =
+      [
+        doc.title || '',
+        doc.course || '',
+        (doc as any).course_code || '',
+        (doc as any).faculty || '',
+        (doc as any).department || '',
+        (doc as any).kind || '',
+      ]
       .join(' ')
       .toLowerCase()
 

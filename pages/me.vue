@@ -105,13 +105,13 @@
           class="space-y-1 border border-borderSubtle bg-surface/90 shadow-sm shadow-background/30"
         >
           <p class="text-[11px] uppercase tracking-[0.16em] text-slate-500">
-            Drills taken
+            Questions answered
           </p>
           <p class="text-2xl font-bold">
-            {{ stats.drills }}
+            {{ stats.totalAnswered }}
           </p>
           <p class="text-[11px] text-slate-500">
-            Completed sessions
+            Recorded attempts
           </p>
         </Card>
 
@@ -119,7 +119,7 @@
           class="space-y-1 border border-borderSubtle bg-surface/90 shadow-sm shadow-background/30"
         >
           <p class="text-[11px] uppercase tracking-[0.16em] text-slate-500">
-            Avg accuracy
+            Accuracy
           </p>
           <p class="text-2xl font-bold text-success">
             {{ stats.accuracy }}%
@@ -133,13 +133,13 @@
           class="space-y-1 border border-borderSubtle bg-surface/90 shadow-sm shadow-background/30"
         >
           <p class="text-[11px] uppercase tracking-[0.16em] text-slate-500">
-            Best accuracy
+            Last 7 days
           </p>
           <p class="text-2xl font-bold text-primary-soft">
-            {{ stats.bestAccuracy }}%
+            {{ stats.last7 }}
           </p>
           <p class="text-[11px] text-slate-500">
-            Top performance
+            Attempts in the past week
           </p>
         </Card>
       </section>
@@ -147,6 +147,26 @@
       <p v-if="statsMessage" class="text-xs text-slate-400">
         {{ statsMessage }}
       </p>
+
+      <section v-if="weakAreas.length" class="space-y-3">
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+          Weak areas
+        </p>
+        <div class="space-y-2">
+          <Card
+            v-for="area in weakAreas"
+            :key="`${area.courseId || 'none'}-${area.topic}`"
+            class="space-y-1 border border-borderSubtle bg-surface/95 shadow-sm shadow-background/30"
+          >
+            <p class="text-sm font-semibold text-slate-100">
+              {{ area.courseCode || 'Course' }} · {{ area.topic }}
+            </p>
+            <p class="text-[11px] text-slate-400">
+              Accuracy {{ area.accuracy }}% from {{ area.attempts }} attempts
+            </p>
+          </Card>
+        </div>
+      </section>
 
       <!-- Simple goals (local only for now) -->
       <section class="space-y-3">
@@ -245,10 +265,22 @@ const auth = useAuth()
 const client = useSupabaseClient()
 
 const stats = reactive({
-  drills: 0,
+  totalAnswered: 0,
+  correct: 0,
   accuracy: 0,
-  bestAccuracy: 0,
+  last7: 0,
 })
+const weakAreas = ref<
+  {
+    courseId: string | null
+    courseCode: string | null
+    courseTitle: string | null
+    topic: string
+    attempts: number
+    correct: number
+    accuracy: number
+  }[]
+>([])
 
 const GOALS_KEY = 'jabuspark:me:goals'
 
@@ -378,7 +410,7 @@ const goalsSummary = computed(() => {
 })
 
 const statsMessage = computed(() => {
-  if (stats.drills === 0) {
+  if (stats.totalAnswered === 0) {
     return 'No drills yet – run your first Quick Drill from the home page.'
   }
   if (stats.accuracy < 50) {
@@ -407,7 +439,10 @@ const goalsProgress = computed(() => {
 
 onMounted(async () => {
   await auth.init()
-  if (auth.user) await fetchStats()
+  if (auth.user) {
+    await fetchStats()
+    await fetchWeakAreas()
+  }
   loadGoals()
 })
 
@@ -416,10 +451,13 @@ watch(
   async (next, prev) => {
     if (next && next !== prev) {
       await fetchStats()
+      await fetchWeakAreas()
     } else if (!next) {
-      stats.drills = 0
+      stats.totalAnswered = 0
+      stats.correct = 0
       stats.accuracy = 0
-      stats.bestAccuracy = 0
+      stats.last7 = 0
+      weakAreas.value = []
     }
   },
 )
@@ -428,22 +466,95 @@ watch(goals, saveGoals, { deep: true })
 
 async function fetchStats() {
   if (!auth.user) return
-  const { data } = await client
+  try {
+    const { data: sessions, error: sessionsError } = await client
+      .from('drill_sessions')
+      .select('id')
+      .eq('user_id', auth.user.id)
+
+    if (sessionsError) {
+      if (sessionsError.code === '42P01') {
+        // fall back to legacy drills table
+        await fetchLegacyStats()
+        return
+      }
+      throw sessionsError
+    }
+
+    const sessionIds = (sessions || []).map((row) => row.id).filter(Boolean)
+    if (!sessionIds.length) {
+      stats.totalAnswered = 0
+      stats.correct = 0
+      stats.accuracy = 0
+      stats.last7 = 0
+      return
+    }
+
+    const { data: attempts, error: attemptsError } = await client
+      .from('question_attempts')
+      .select('is_correct, created_at')
+      .in('session_id', sessionIds)
+
+    if (attemptsError) {
+      if (attemptsError.code === '42P01') {
+        await fetchLegacyStats()
+        return
+      }
+      throw attemptsError
+    }
+
+    const totalAnswered = attempts?.length || 0
+    const correct = (attempts || []).filter((row) => row.is_correct).length
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - 7)
+    const last7 = (attempts || []).filter((row) => {
+      const ts = row?.created_at ? new Date(row.created_at) : null
+      return ts != null && ts >= cutoff
+    }).length
+
+    stats.totalAnswered = totalAnswered
+    stats.correct = correct
+    stats.accuracy = totalAnswered ? Math.round((correct / totalAnswered) * 100) : 0
+    stats.last7 = last7
+  } catch (err) {
+    console.warn('Failed to fetch drill stats', err)
+  }
+}
+
+async function fetchWeakAreas() {
+  if (!auth.user) return
+  try {
+    const data = await $fetch<typeof weakAreas.value>('/api/me/weak-areas')
+    weakAreas.value = data || []
+  } catch (err) {
+    console.warn('Failed to fetch weak areas', err)
+  }
+}
+
+async function fetchLegacyStats() {
+  const { data, error } = await client
     .from('drills')
     .select('score, accuracy')
     .eq('user_id', auth.user.id)
 
-  stats.drills = data?.length || 0
+  if (error) {
+    console.warn('Legacy drills stats failed', error.message)
+    return
+  }
+
+  stats.totalAnswered = data?.length || 0
 
   if (data && data.length) {
     const accuracies = data.map((row) => row.accuracy || 0)
     const avg =
       accuracies.reduce((sum, a) => sum + a, 0) / (accuracies.length || 1)
     stats.accuracy = Math.round(avg)
-    stats.bestAccuracy = Math.round(Math.max(...accuracies))
+    stats.correct = data.map((row) => row.score || 0).reduce((a, b) => a + b, 0)
+    stats.last7 = 0
   } else {
     stats.accuracy = 0
-    stats.bestAccuracy = 0
+    stats.correct = 0
+    stats.last7 = 0
   }
 }
 
