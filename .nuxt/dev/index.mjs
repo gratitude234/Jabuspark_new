@@ -3,43 +3,43 @@ import { Server } from 'node:http';
 import { resolve, dirname, join } from 'node:path';
 import nodeCrypto, { randomUUID } from 'node:crypto';
 import { parentPort, threadId } from 'node:worker_threads';
-import { defineEventHandler, handleCacheHeaders, splitCookiesString, createEvent, fetchWithEvent, isEvent, eventHandler, setHeaders, sendRedirect, proxyRequest, getRequestHeader, setResponseHeaders, setResponseStatus, send, getRequestHeaders, setResponseHeader, appendResponseHeader, getRequestURL, getResponseHeader, removeResponseHeader, createError, getQuery as getQuery$1, readBody, createApp, createRouter as createRouter$1, toNodeListener, lazyEventHandler, getResponseStatus, getRouterParam, setCookie, getHeader, getResponseStatusText } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/h3/dist/index.mjs';
-import { escapeHtml } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/@vue/shared/dist/shared.cjs.js';
-import pdf from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/pdf-parse/index.js';
-import { createClient } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/@supabase/supabase-js/dist/main/index.js';
-import { createServerClient, parseCookieHeader } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/@supabase/ssr/dist/main/index.js';
-import { createRenderer, getRequestDependencies, getPreloadLinks, getPrefetchLinks } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/vue-bundle-renderer/dist/runtime.mjs';
-import { parseURL, withoutBase, joinURL, getQuery, withQuery, withTrailingSlash, decodePath, withLeadingSlash, withoutTrailingSlash, joinRelativeURL } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/ufo/dist/index.mjs';
-import { renderToString } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/vue/server-renderer/index.mjs';
-import { klona } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/klona/dist/index.mjs';
-import defu, { defuFn } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/defu/dist/defu.mjs';
-import destr, { destr as destr$1 } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/destr/dist/index.mjs';
-import { snakeCase } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/scule/dist/index.mjs';
-import { createHead as createHead$1, propsToString, renderSSRHead } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/unhead/dist/server.mjs';
-import { stringify, uneval } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/devalue/index.js';
-import { isVNode, toValue, isRef } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/vue/index.mjs';
-import { DeprecationsPlugin, PromisesPlugin, TemplateParamsPlugin, AliasSortingPlugin } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/unhead/dist/plugins.mjs';
-import { createHooks } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/hookable/dist/index.mjs';
-import { createFetch, Headers as Headers$1 } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/ofetch/dist/node.mjs';
-import { fetchNodeRequestHandler, callNodeRequestHandler } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/node-mock-http/dist/index.mjs';
-import { createStorage, prefixStorage } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/unstorage/dist/index.mjs';
-import unstorage_47drivers_47fs from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/unstorage/drivers/fs.mjs';
-import { digest } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/ohash/dist/index.mjs';
-import { toRouteMatcher, createRouter } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/radix3/dist/index.mjs';
+import { defineEventHandler, handleCacheHeaders, splitCookiesString, createEvent, fetchWithEvent, isEvent, eventHandler, setHeaders, sendRedirect, proxyRequest, getRequestHeader, setResponseHeaders, setResponseStatus, send, getRequestHeaders, setResponseHeader, appendResponseHeader, getRequestURL, getResponseHeader, removeResponseHeader, createError, getQuery as getQuery$1, readBody, createApp, createRouter as createRouter$1, toNodeListener, lazyEventHandler, getResponseStatus, getRouterParam, setCookie, getHeader, getResponseStatusText } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/h3/dist/index.mjs';
+import { escapeHtml } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/@vue/shared/dist/shared.cjs.js';
+import pdf from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/pdf-parse/index.js';
+import { createClient } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/@supabase/supabase-js/dist/main/index.js';
+import { createServerClient, parseCookieHeader } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/@supabase/ssr/dist/main/index.js';
+import { createRenderer, getRequestDependencies, getPreloadLinks, getPrefetchLinks } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/vue-bundle-renderer/dist/runtime.mjs';
+import { parseURL, withoutBase, joinURL, getQuery, withQuery, withTrailingSlash, decodePath, withLeadingSlash, withoutTrailingSlash, joinRelativeURL } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/ufo/dist/index.mjs';
+import { renderToString } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/vue/server-renderer/index.mjs';
+import { klona } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/klona/dist/index.mjs';
+import defu, { defuFn } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/defu/dist/defu.mjs';
+import destr, { destr as destr$1 } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/destr/dist/index.mjs';
+import { snakeCase } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/scule/dist/index.mjs';
+import { createHead as createHead$1, propsToString, renderSSRHead } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/unhead/dist/server.mjs';
+import { stringify, uneval } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/devalue/index.js';
+import { isVNode, toValue, isRef } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/vue/index.mjs';
+import { DeprecationsPlugin, PromisesPlugin, TemplateParamsPlugin, AliasSortingPlugin } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/unhead/dist/plugins.mjs';
+import { createHooks } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/hookable/dist/index.mjs';
+import { createFetch, Headers as Headers$1 } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/ofetch/dist/node.mjs';
+import { fetchNodeRequestHandler, callNodeRequestHandler } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/node-mock-http/dist/index.mjs';
+import { createStorage, prefixStorage } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/unstorage/dist/index.mjs';
+import unstorage_47drivers_47fs from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/unstorage/drivers/fs.mjs';
+import { digest } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/ohash/dist/index.mjs';
+import { toRouteMatcher, createRouter } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/radix3/dist/index.mjs';
 import { readFile } from 'node:fs/promises';
-import consola, { consola as consola$1 } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/consola/dist/index.mjs';
-import { ErrorParser } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/youch-core/build/index.js';
-import { Youch } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/nitropack/node_modules/youch/build/index.js';
-import { SourceMapConsumer } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/source-map/source-map.js';
+import consola, { consola as consola$1 } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/consola/dist/index.mjs';
+import { ErrorParser } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/youch-core/build/index.js';
+import { Youch } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/nitropack/node_modules/youch/build/index.js';
+import { SourceMapConsumer } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/source-map/source-map.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { getContext } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/unctx/dist/index.mjs';
-import { captureRawStackTrace, parseRawStackTrace } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/errx/dist/index.js';
+import { getContext } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/unctx/dist/index.mjs';
+import { captureRawStackTrace, parseRawStackTrace } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/errx/dist/index.js';
 import { promises } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname as dirname$1, resolve as resolve$1 } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/pathe/dist/index.mjs';
-import { walkResolver } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/unhead/dist/utils.mjs';
+import { dirname as dirname$1, resolve as resolve$1 } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/pathe/dist/index.mjs';
+import { walkResolver } from 'file://C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/unhead/dist/utils.mjs';
 
-const serverAssets = [{"baseName":"server","dir":"C:/Users/hp/Downloads/JabuSpark/server/assets"}];
+const serverAssets = [{"baseName":"server","dir":"C:/Users/hp/Documents/JABUSPARK-MVP/server/assets"}];
 
 const assets$1 = createStorage();
 
@@ -51,11 +51,11 @@ const storage = createStorage({});
 
 storage.mount('/assets', assets$1);
 
-storage.mount('root', unstorage_47drivers_47fs({"driver":"fs","readOnly":true,"base":"C:/Users/hp/Downloads/JabuSpark","watchOptions":{"ignored":[null]}}));
-storage.mount('src', unstorage_47drivers_47fs({"driver":"fs","readOnly":true,"base":"C:/Users/hp/Downloads/JabuSpark/server","watchOptions":{"ignored":[null]}}));
-storage.mount('build', unstorage_47drivers_47fs({"driver":"fs","readOnly":false,"base":"C:/Users/hp/Downloads/JabuSpark/.nuxt"}));
-storage.mount('cache', unstorage_47drivers_47fs({"driver":"fs","readOnly":false,"base":"C:/Users/hp/Downloads/JabuSpark/.nuxt/cache"}));
-storage.mount('data', unstorage_47drivers_47fs({"driver":"fs","base":"C:/Users/hp/Downloads/JabuSpark/.data/kv"}));
+storage.mount('root', unstorage_47drivers_47fs({"driver":"fs","readOnly":true,"base":"C:/Users/hp/Documents/JABUSPARK-MVP","watchOptions":{"ignored":[null]}}));
+storage.mount('src', unstorage_47drivers_47fs({"driver":"fs","readOnly":true,"base":"C:/Users/hp/Documents/JABUSPARK-MVP/server","watchOptions":{"ignored":[null]}}));
+storage.mount('build', unstorage_47drivers_47fs({"driver":"fs","readOnly":false,"base":"C:/Users/hp/Documents/JABUSPARK-MVP/.nuxt"}));
+storage.mount('cache', unstorage_47drivers_47fs({"driver":"fs","readOnly":false,"base":"C:/Users/hp/Documents/JABUSPARK-MVP/.nuxt/cache"}));
+storage.mount('data', unstorage_47drivers_47fs({"driver":"fs","base":"C:/Users/hp/Documents/JABUSPARK-MVP/.data/kv"}));
 
 function useStorage(base = "") {
   return base ? prefixStorage(storage, base) : storage;
@@ -1057,13 +1057,13 @@ if (!window.__NUXT_DEVTOOLS_TIME_METRIC__) {
 window.__NUXT_DEVTOOLS_TIME_METRIC__.appInit = Date.now()
 `;
 
-const _KyPJxtZ8hN80uADY0Qy6tq6R9LL0DAw6JWqGF_FgRg = (function(nitro) {
+const _HSDLB2AxaMcEQ7j5RQeKxgeC7UfpwlqGYWxYPaCmztM = (function(nitro) {
   nitro.hooks.hook("render:html", (htmlContext) => {
     htmlContext.head.push(`<script>${script}<\/script>`);
   });
 });
 
-const rootDir = "C:/Users/hp/Downloads/JabuSpark";
+const rootDir = "C:/Users/hp/Documents/JABUSPARK-MVP";
 
 const appHead = {"meta":[{"charset":"utf-8"},{"name":"theme-color","content":"#0f172a"},{"name":"viewport","content":"width=device-width, initial-scale=1"}],"link":[{"rel":"manifest","href":"/manifest.webmanifest"},{"rel":"icon","type":"image/png","sizes":"192x192","href":"/icons/icon-192.png"},{"rel":"icon","type":"image/png","sizes":"512x512","href":"/icons/icon-512.png"}],"style":[],"script":[],"noscript":[],"title":"JabuSpark"};
 
@@ -1082,7 +1082,7 @@ const devReducers = {
   URL: (data) => data instanceof URL ? data.toString() : void 0
 };
 const asyncContext = getContext("nuxt-dev", { asyncContext: true, AsyncLocalStorage });
-const _6D5zT291OWWh9OeMZ2774KRfl7ksAPw6u68dqDJvFpc = (nitroApp) => {
+const _USZPoDmlaoJDaRJc_YmyHsD7cSyCny2Z733uLLKMmhU = (nitroApp) => {
   const handler = nitroApp.h3App.handler;
   nitroApp.h3App.handler = (event) => {
     return asyncContext.callAsync({ logs: [], event }, () => handler(event));
@@ -1152,8 +1152,8 @@ function onConsoleLog(callback) {
 }
 
 const plugins = [
-  _KyPJxtZ8hN80uADY0Qy6tq6R9LL0DAw6JWqGF_FgRg,
-_6D5zT291OWWh9OeMZ2774KRfl7ksAPw6u68dqDJvFpc
+  _HSDLB2AxaMcEQ7j5RQeKxgeC7UfpwlqGYWxYPaCmztM,
+_USZPoDmlaoJDaRJc_YmyHsD7cSyCny2Z733uLLKMmhU
 ];
 
 const assets = {};
@@ -1181,7 +1181,7 @@ function getAsset (id) {
 
 const METHODS = /* @__PURE__ */ new Set(["HEAD", "GET"]);
 const EncodingMap = { gzip: ".gz", br: ".br" };
-const _1Rwqns = eventHandler((event) => {
+const _vEr8IH = eventHandler((event) => {
   if (event.method && !METHODS.has(event.method)) {
     return;
   }
@@ -1319,8 +1319,8 @@ function publicAssetsURL(...path) {
 
 const APP_ROOT_OPEN_TAG = `<${appRootTag}${propsToString(appRootAttrs)}>`;
 const APP_ROOT_CLOSE_TAG = `</${appRootTag}>`;
-const getServerEntry = () => import('file://C:/Users/hp/Downloads/JabuSpark/.nuxt/dist/server/server.mjs').then((r) => r.default || r);
-const getClientManifest = () => import('file://C:/Users/hp/Downloads/JabuSpark/.nuxt/dist/server/client.manifest.mjs').then((r) => r.default || r).then((r) => typeof r === "function" ? r() : r);
+const getServerEntry = () => import('file://C:/Users/hp/Documents/JABUSPARK-MVP/.nuxt/dist/server/server.mjs').then((r) => r.default || r);
+const getClientManifest = () => import('file://C:/Users/hp/Documents/JABUSPARK-MVP/.nuxt/dist/server/client.manifest.mjs').then((r) => r.default || r).then((r) => typeof r === "function" ? r() : r);
 const getSSRRenderer = lazyCachedFunction(async () => {
   const manifest = await getClientManifest();
   if (!manifest) {
@@ -1566,27 +1566,47 @@ async function getIslandContext(event) {
   return ctx;
 }
 
-const _lazy__l0Dz4 = () => Promise.resolve().then(function () { return courseDocs_get$1; });
-const _lazy_fgakhl = () => Promise.resolve().then(function () { return approve_post$1; });
-const _lazy_XF2JrY = () => Promise.resolve().then(function () { return archive_post$1; });
-const _lazy_hm9YPr = () => Promise.resolve().then(function () { return ask_post$1; });
-const _lazy_VdaDbW = () => Promise.resolve().then(function () { return drill_post$1; });
-const _lazy_YC6bFj = () => Promise.resolve().then(function () { return generate_post$1; });
-const _lazy_J0N6Ht = () => Promise.resolve().then(function () { return ingest_post$1; });
-const _lazy_P9YZMf = () => Promise.resolve().then(function () { return renderer$1; });
+const _lazy_RVvvVX = () => Promise.resolve().then(function () { return courseDocs_get$1; });
+const _lazy_iVqXzO = () => Promise.resolve().then(function () { return approve_post$1; });
+const _lazy_Bdae14 = () => Promise.resolve().then(function () { return archive_post$1; });
+const _lazy_3SO4qK = () => Promise.resolve().then(function () { return ask_post$1; });
+const _lazy__8_fya = () => Promise.resolve().then(function () { return enrol_post$1; });
+const _lazy_tfzWPT = () => Promise.resolve().then(function () { return enrolments_get$1; });
+const _lazy_BXn2FD = () => Promise.resolve().then(function () { return index_get$3; });
+const _lazy_603cuS = () => Promise.resolve().then(function () { return unenrol_post$1; });
+const _lazy_BwtpUW = () => Promise.resolve().then(function () { return drill_post$1; });
+const _lazy_nObRTK = () => Promise.resolve().then(function () { return attempts_post$1; });
+const _lazy_E34KR3 = () => Promise.resolve().then(function () { return review_post$1; });
+const _lazy_fS85Zx = () => Promise.resolve().then(function () { return index_get$1; });
+const _lazy_AFs2kP = () => Promise.resolve().then(function () { return weakAreas_get$1; });
+const _lazy_zPjEOW = () => Promise.resolve().then(function () { return enrich_post$1; });
+const _lazy_UpoMjt = () => Promise.resolve().then(function () { return generate_post$1; });
+const _lazy_Qe2qTS = () => Promise.resolve().then(function () { return stems_post$1; });
+const _lazy_7Yhm0j = () => Promise.resolve().then(function () { return ingest_post$1; });
+const _lazy_ykl6HH = () => Promise.resolve().then(function () { return renderer$1; });
 
 const handlers = [
-  { route: '', handler: _1Rwqns, lazy: false, middleware: true, method: undefined },
-  { route: '/api/admin/course-docs', handler: _lazy__l0Dz4, lazy: true, middleware: false, method: "get" },
-  { route: '/api/admin/course-docs/approve', handler: _lazy_fgakhl, lazy: true, middleware: false, method: "post" },
-  { route: '/api/admin/course-docs/archive', handler: _lazy_XF2JrY, lazy: true, middleware: false, method: "post" },
-  { route: '/api/ask', handler: _lazy_hm9YPr, lazy: true, middleware: false, method: "post" },
-  { route: '/api/drill', handler: _lazy_VdaDbW, lazy: true, middleware: false, method: "post" },
-  { route: '/api/questions/generate', handler: _lazy_YC6bFj, lazy: true, middleware: false, method: "post" },
-  { route: '/api/rag/ingest', handler: _lazy_J0N6Ht, lazy: true, middleware: false, method: "post" },
-  { route: '/__nuxt_error', handler: _lazy_P9YZMf, lazy: true, middleware: false, method: undefined },
+  { route: '', handler: _vEr8IH, lazy: false, middleware: true, method: undefined },
+  { route: '/api/admin/course-docs', handler: _lazy_RVvvVX, lazy: true, middleware: false, method: "get" },
+  { route: '/api/admin/course-docs/approve', handler: _lazy_iVqXzO, lazy: true, middleware: false, method: "post" },
+  { route: '/api/admin/course-docs/archive', handler: _lazy_Bdae14, lazy: true, middleware: false, method: "post" },
+  { route: '/api/ask', handler: _lazy_3SO4qK, lazy: true, middleware: false, method: "post" },
+  { route: '/api/courses/enrol', handler: _lazy__8_fya, lazy: true, middleware: false, method: "post" },
+  { route: '/api/courses/enrolments', handler: _lazy_tfzWPT, lazy: true, middleware: false, method: "get" },
+  { route: '/api/courses', handler: _lazy_BXn2FD, lazy: true, middleware: false, method: "get" },
+  { route: '/api/courses/unenrol', handler: _lazy_603cuS, lazy: true, middleware: false, method: "post" },
+  { route: '/api/drill', handler: _lazy_BwtpUW, lazy: true, middleware: false, method: "post" },
+  { route: '/api/drill/attempts', handler: _lazy_nObRTK, lazy: true, middleware: false, method: "post" },
+  { route: '/api/drill/review', handler: _lazy_E34KR3, lazy: true, middleware: false, method: "post" },
+  { route: '/api/leaderboard', handler: _lazy_fS85Zx, lazy: true, middleware: false, method: "get" },
+  { route: '/api/me/weak-areas', handler: _lazy_AFs2kP, lazy: true, middleware: false, method: "get" },
+  { route: '/api/questions/enrich', handler: _lazy_zPjEOW, lazy: true, middleware: false, method: "post" },
+  { route: '/api/questions/generate', handler: _lazy_UpoMjt, lazy: true, middleware: false, method: "post" },
+  { route: '/api/questions/stems', handler: _lazy_Qe2qTS, lazy: true, middleware: false, method: "post" },
+  { route: '/api/rag/ingest', handler: _lazy_7Yhm0j, lazy: true, middleware: false, method: "post" },
+  { route: '/__nuxt_error', handler: _lazy_ykl6HH, lazy: true, middleware: false, method: undefined },
   { route: '/__nuxt_island/**', handler: _SxA8c9, lazy: false, middleware: false, method: undefined },
-  { route: '/**', handler: _lazy_P9YZMf, lazy: true, middleware: false, method: undefined }
+  { route: '/**', handler: _lazy_ykl6HH, lazy: true, middleware: false, method: undefined }
 ];
 
 function createNitroApp() {
@@ -1963,6 +1983,36 @@ async function requireTutorOrAdminRole(supabase, userId) {
   return role;
 }
 
+function createServiceClient() {
+  const config = useRuntimeConfig();
+  if (!config.public.supabaseUrl || !config.supabaseServiceKey) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Missing Supabase service credentials"
+    });
+  }
+  return createClient(config.public.supabaseUrl, config.supabaseServiceKey);
+}
+
+async function requireDocumentAccess({
+  docId,
+  userId,
+  fields = "id, user_id, title, course, course_code, level, faculty, department, is_public, status",
+  supabase = createServiceClient()
+}) {
+  const { data: doc, error } = await supabase.from("documents").select(fields).eq("id", docId).maybeSingle();
+  if (error) {
+    throw createError({ statusCode: 500, statusMessage: error.message });
+  }
+  if (!doc) {
+    throw createError({ statusCode: 404, statusMessage: "Document not found." });
+  }
+  if (userId && doc.user_id && doc.user_id !== userId) {
+    throw createError({ statusCode: 403, statusMessage: "You do not have access to this document." });
+  }
+  return { doc, supabase };
+}
+
 const STUB_VECTOR_SIZE = 768;
 const MAX_BATCH = 32;
 async function embedText(text) {
@@ -2245,17 +2295,6 @@ function summarizeChunk(text) {
   const trimmed = text.trim();
   if (trimmed.length <= 150) return trimmed;
   return trimmed.slice(0, 150) + "...";
-}
-
-function createServiceClient() {
-  const config = useRuntimeConfig();
-  if (!config.public.supabaseUrl || !config.supabaseServiceKey) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: "Missing Supabase service credentials"
-    });
-  }
-  return createClient(config.public.supabaseUrl, config.supabaseServiceKey);
 }
 
 const serverSupabaseClient = async (event) => {
@@ -2551,6 +2590,107 @@ const ask_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty
   default: ask_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
+const enrol_post = defineEventHandler(async (event) => {
+  const user = await serverSupabaseUser(event);
+  if (!user) {
+    throw createError({ statusCode: 401, statusMessage: "Sign in required" });
+  }
+  const body = await readBody(event);
+  const courseId = typeof (body == null ? void 0 : body.courseId) === "string" ? body.courseId.trim() : "";
+  if (!courseId) {
+    throw createError({ statusCode: 400, statusMessage: "courseId required" });
+  }
+  const supabase = createServiceClient();
+  const { data: existing, error: existingError } = await supabase.from("course_enrolments").select("id").eq("user_id", user.id).eq("course_id", courseId).maybeSingle();
+  if (existingError) {
+    throw createError({ statusCode: 500, statusMessage: existingError.message });
+  }
+  if (existing) {
+    return { id: existing.id };
+  }
+  const { data, error } = await supabase.from("course_enrolments").insert({ course_id: courseId, user_id: user.id }).select("id").maybeSingle();
+  if (error) {
+    throw createError({ statusCode: 500, statusMessage: error.message });
+  }
+  return { id: data == null ? void 0 : data.id };
+});
+
+const enrol_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: enrol_post
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const enrolments_get = defineEventHandler(async (event) => {
+  const user = await serverSupabaseUser(event);
+  if (!user) {
+    throw createError({ statusCode: 401, statusMessage: "Sign in required" });
+  }
+  const supabase = createServiceClient();
+  const { data, error } = await supabase.from("course_enrolments").select("id, level, course_id, courses(id, code, title, level, faculty, department)").eq("user_id", user.id).order("created_at", { ascending: false });
+  if (error) {
+    throw createError({ statusCode: 500, statusMessage: error.message });
+  }
+  return (data || []).map((row) => ({
+    id: row.id,
+    level: row.level,
+    course: row.courses,
+    courseId: row.course_id
+  }));
+});
+
+const enrolments_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: enrolments_get
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const index_get$2 = defineEventHandler(async (event) => {
+  const supabase = createServiceClient();
+  const query = getQuery$1(event);
+  const builder = supabase.from("courses").select("id, code, title, level, faculty, department").eq("is_active", true);
+  if (query.level && typeof query.level === "string") {
+    builder.eq("level", query.level);
+  }
+  if (query.faculty && typeof query.faculty === "string") {
+    builder.eq("faculty", query.faculty);
+  }
+  if (query.department && typeof query.department === "string") {
+    builder.eq("department", query.department);
+  }
+  const { data, error } = await builder.order("code", { ascending: true }).order("title", { ascending: true });
+  if (error) {
+    throw createError({ statusCode: 500, statusMessage: error.message });
+  }
+  return data != null ? data : [];
+});
+
+const index_get$3 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: index_get$2
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const unenrol_post = defineEventHandler(async (event) => {
+  const user = await serverSupabaseUser(event);
+  if (!user) {
+    throw createError({ statusCode: 401, statusMessage: "Sign in required" });
+  }
+  const body = await readBody(event);
+  const courseId = typeof (body == null ? void 0 : body.courseId) === "string" ? body.courseId.trim() : "";
+  if (!courseId) {
+    throw createError({ statusCode: 400, statusMessage: "courseId required" });
+  }
+  const supabase = createServiceClient();
+  const { error } = await supabase.from("course_enrolments").delete().eq("user_id", user.id).eq("course_id", courseId);
+  if (error) {
+    throw createError({ statusCode: 500, statusMessage: error.message });
+  }
+  return { success: true };
+});
+
+const unenrol_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: unenrol_post
+}, Symbol.toStringTag, { value: 'Module' }));
+
 const DEFAULT_COUNT = 10;
 const MIN_COUNT = 1;
 const MAX_COUNT = 50;
@@ -2566,7 +2706,7 @@ const drill_post = defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: "Select at least one document." });
   }
   const requestedCount = typeof (body == null ? void 0 : body.count) === "number" ? body.count : DEFAULT_COUNT;
-  const targetCount = clamp$1(requestedCount, MIN_COUNT, MAX_COUNT);
+  const targetCount = clamp$4(requestedCount, MIN_COUNT, MAX_COUNT);
   const supabase = createServiceClient();
   const { data: docs, error: docsError } = await supabase.from("documents").select("id").eq("user_id", user.id).eq("status", "ready").in("id", docIds);
   if (docsError) {
@@ -2605,7 +2745,7 @@ const drill_post = defineEventHandler(async (event) => {
       questionRows = filtered;
     }
   }
-  const shuffled = shuffle(questionRows.slice());
+  const shuffled = shuffle$1(questionRows.slice());
   const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
   const mapped = [];
   for (const row of selected) {
@@ -2623,8 +2763,7 @@ const drill_post = defineEventHandler(async (event) => {
   const sessionId = await logDrillSession(supabase, {
     userId: user.id,
     docIds: verifiedDocIds,
-    questionCount: mapped.length,
-    difficulty
+    questionCount: mapped.length
   });
   return {
     sessionId,
@@ -2664,49 +2803,34 @@ function mapRowToQuestion(row) {
     sectionId: typeof row.section_id === "string" && row.section_id.length ? row.section_id : null
   };
 }
-function shuffle(values) {
+function shuffle$1(values) {
   for (let i = values.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1));
     [values[i], values[j]] = [values[j], values[i]];
   }
   return values;
 }
-function clamp$1(value, min, max) {
+function clamp$4(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 async function logDrillSession(supabase, params) {
-  var _a, _b, _c, _d;
+  var _a;
   try {
-    const basePayload = {
+    const payload = {
+      id: randomUUID(),
       user_id: params.userId,
-      doc_ids: params.docIds,
-      question_count: params.questionCount
+      doc_id: params.docIds[0] || null,
+      started_at: (/* @__PURE__ */ new Date()).toISOString(),
+      total_questions: params.questionCount,
+      correct_answers: 0
     };
-    if (params.difficulty && params.difficulty !== "mixed") {
-      basePayload.difficulty = params.difficulty;
-    }
-    const { data, error } = await supabase.from("drills").insert(basePayload).select("id").maybeSingle();
+    const { data, error } = await supabase.from("drill_sessions").insert(payload).select("id").maybeSingle();
     if (!error) {
-      return (_a = data == null ? void 0 : data.id) != null ? _a : null;
-    }
-    if (error.code === "42703" && "difficulty" in basePayload) {
-      delete basePayload.difficulty;
-      const retry = await supabase.from("drills").insert(basePayload).select("id").maybeSingle();
-      if (!retry.error) {
-        return (_c = (_b = retry.data) == null ? void 0 : _b.id) != null ? _c : null;
-      }
-      if (((_d = retry.error) == null ? void 0 : _d.code) === "42P01") {
-        console.warn("drills table missing; skipping drill session logging.");
-        return null;
-      }
-      if (retry.error) {
-        console.error("Failed to log drill session after retry", retry.error);
-        return null;
-      }
+      return (_a = data == null ? void 0 : data.id) != null ? _a : payload.id;
     }
     if (error.code === "42P01") {
-      console.warn("drills table missing; skipping drill session logging.");
-      return null;
+      console.warn("drill_sessions table missing; falling back to legacy drills table.");
+      return await legacyLogDrillSession(supabase, params);
     }
     console.error("Failed to log drill session", error);
     return null;
@@ -2714,6 +2838,24 @@ async function logDrillSession(supabase, params) {
     console.error("Unexpected drill session logging failure", err);
     return null;
   }
+}
+async function legacyLogDrillSession(supabase, params) {
+  var _a;
+  const basePayload = {
+    user_id: params.userId,
+    doc_ids: params.docIds,
+    question_count: params.questionCount
+  };
+  const { data, error } = await supabase.from("drills").insert(basePayload).select("id").maybeSingle();
+  if (!error) {
+    return (_a = data == null ? void 0 : data.id) != null ? _a : null;
+  }
+  if (error.code === "42P01") {
+    console.warn("drills table missing; skipping drill session logging.");
+    return null;
+  }
+  console.error("Failed to log drill session", error);
+  return null;
 }
 function normalizeDifficulty(value) {
   const normalized = typeof value === "string" ? value.toLowerCase().trim() : "";
@@ -2724,6 +2866,486 @@ function normalizeDifficulty(value) {
 const drill_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
   default: drill_post
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const attempts_post = defineEventHandler(async (event) => {
+  const user = await serverSupabaseUser(event);
+  if (!user) {
+    throw createError({ statusCode: 401, statusMessage: "Sign in required." });
+  }
+  const body = await readBody(event);
+  if (!(body == null ? void 0 : body.sessionId) || typeof body.sessionId !== "string") {
+    throw createError({ statusCode: 400, statusMessage: "sessionId is required." });
+  }
+  const attempts = Array.isArray(body.attempts) ? body.attempts : [];
+  if (!attempts.length) {
+    throw createError({ statusCode: 400, statusMessage: "attempts array is required." });
+  }
+  const supabase = createServiceClient();
+  const { data: session, error: sessionError } = await supabase.from("drill_sessions").select("id, user_id").eq("id", body.sessionId).maybeSingle();
+  if (sessionError) {
+    throw createError({ statusCode: 500, statusMessage: sessionError.message });
+  }
+  if (!session) {
+    throw createError({ statusCode: 404, statusMessage: "Drill session not found." });
+  }
+  if (session.user_id !== user.id) {
+    throw createError({ statusCode: 403, statusMessage: "You do not own this session." });
+  }
+  const normalizedAttempts = attempts.map((attempt) => ({
+    questionId: typeof (attempt == null ? void 0 : attempt.questionId) === "string" ? attempt.questionId : "",
+    choiceIndex: typeof (attempt == null ? void 0 : attempt.choiceIndex) === "number" ? attempt.choiceIndex : attempt && typeof attempt.chosen_index === "number" ? attempt.chosen_index : -1
+  })).filter((attempt) => attempt.questionId && attempt.choiceIndex >= 0);
+  if (!normalizedAttempts.length) {
+    throw createError({ statusCode: 400, statusMessage: "No valid attempts found." });
+  }
+  const questionIds = Array.from(new Set(normalizedAttempts.map((item) => item.questionId)));
+  const { data: questionRows, error: questionError } = await supabase.from("questions").select("id, correct").in("id", questionIds);
+  if (questionError) {
+    throw createError({ statusCode: 500, statusMessage: questionError.message });
+  }
+  const correctMap = /* @__PURE__ */ new Map();
+  questionRows == null ? void 0 : questionRows.forEach((row) => {
+    if (row == null ? void 0 : row.id) correctMap.set(row.id, typeof row.correct === "number" ? row.correct : 0);
+  });
+  const inserts = normalizedAttempts.map((attempt) => ({
+    session_id: body.sessionId,
+    question_id: attempt.questionId,
+    chosen_index: attempt.choiceIndex,
+    is_correct: attempt.choiceIndex === correctMap.get(attempt.questionId)
+  }));
+  const { error: insertError } = await supabase.from("question_attempts").insert(inserts);
+  if (insertError) {
+    if (insertError.code === "42P01") {
+      console.warn("question_attempts table missing; skipping logging attempts.");
+      return { logged: 0 };
+    }
+    throw createError({ statusCode: 500, statusMessage: insertError.message });
+  }
+  const { data: allAttempts, error: fetchAttemptsError } = await supabase.from("question_attempts").select("is_correct").eq("session_id", body.sessionId);
+  if (fetchAttemptsError) {
+    throw createError({ statusCode: 500, statusMessage: fetchAttemptsError.message });
+  }
+  const totalQuestions = (allAttempts == null ? void 0 : allAttempts.length) || inserts.length;
+  const correctAnswers = (allAttempts || inserts).filter((row) => row.is_correct).length;
+  const updatePayload = {
+    total_questions: totalQuestions,
+    correct_answers: correctAnswers
+  };
+  if (body.completed) {
+    updatePayload.completed_at = (/* @__PURE__ */ new Date()).toISOString();
+  }
+  const { error: updateError } = await supabase.from("drill_sessions").update(updatePayload).eq("id", body.sessionId);
+  if (updateError && updateError.code !== "42P01") {
+    console.error("Failed to update drill session stats", updateError);
+  }
+  return {
+    logged: inserts.length,
+    totalQuestions,
+    correctAnswers
+  };
+});
+
+const attempts_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: attempts_post
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const review_post = defineEventHandler(async (event) => {
+  const user = await serverSupabaseUser(event);
+  if (!user) {
+    throw createError({ statusCode: 401, statusMessage: "Sign in required." });
+  }
+  const body = await readBody(event);
+  const limit = clamp$3(typeof (body == null ? void 0 : body.limit) === "number" ? body.limit : 20, 1, 50);
+  const courseId = typeof (body == null ? void 0 : body.courseId) === "string" ? body.courseId : null;
+  const docId = typeof (body == null ? void 0 : body.docId) === "string" ? body.docId : null;
+  const supabase = createServiceClient();
+  const { data: sessions, error: sessionsError } = await supabase.from("drill_sessions").select("id, doc_id").eq("user_id", user.id);
+  if (sessionsError) {
+    throw createError({ statusCode: 500, statusMessage: sessionsError.message });
+  }
+  const sessionIds = (sessions || []).map((s) => s.id);
+  if (!sessionIds.length) {
+    return { questions: [] };
+  }
+  const { data: attempts, error: attemptsError } = await supabase.from("question_attempts").select("question_id, is_correct, session_id").in("session_id", sessionIds).eq("is_correct", false);
+  if (attemptsError) {
+    throw createError({ statusCode: 500, statusMessage: attemptsError.message });
+  }
+  const questionIds = Array.from(new Set((attempts || []).map((a) => a.question_id)));
+  if (!questionIds.length) return { questions: [] };
+  const { data: questions, error: questionsError } = await supabase.from("questions").select("id, doc_id, stem, options, correct, explanation, section_topic").in("id", questionIds);
+  if (questionsError) {
+    throw createError({ statusCode: 500, statusMessage: questionsError.message });
+  }
+  const docIds = Array.from(new Set((questions || []).map((q) => q.doc_id)));
+  const { data: documents, error: docsError } = await supabase.from("documents").select("id, course_id").in("id", docIds);
+  if (docsError) {
+    throw createError({ statusCode: 500, statusMessage: docsError.message });
+  }
+  const docMap = /* @__PURE__ */ new Map();
+  (documents || []).forEach((doc) => docMap.set(doc.id, doc));
+  const filtered = [];
+  for (const q of questions || []) {
+    const docMeta = docMap.get(q.doc_id);
+    if (courseId && (docMeta == null ? void 0 : docMeta.course_id) !== courseId) continue;
+    if (docId && q.doc_id !== docId) continue;
+    const options = Array.isArray(q.options) ? q.options.map((opt) => typeof opt === "string" ? opt : opt != null ? String(opt) : "").filter((opt) => opt.length) : [];
+    filtered.push({
+      id: q.id,
+      stem: q.stem || "",
+      options,
+      correct: typeof q.correct === "number" ? q.correct : 0,
+      explanation: q.explanation || null,
+      docId: q.doc_id,
+      topic: q.section_topic || null,
+      sectionId: null
+    });
+  }
+  const unique = shuffle(filtered).slice(0, limit);
+  if (!unique.length) {
+    return { questions: [] };
+  }
+  const sessionId = await logReviewSession(supabase, {
+    userId: user.id,
+    docId: docId || unique[0].docId || null,
+    questionCount: unique.length
+  });
+  return {
+    sessionId,
+    questions: unique
+  };
+});
+function clamp$3(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+function shuffle(values) {
+  for (let i = values.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [values[i], values[j]] = [values[j], values[i]];
+  }
+  return values;
+}
+async function logReviewSession(supabase, params) {
+  var _a;
+  try {
+    const payload = {
+      id: randomUUID(),
+      user_id: params.userId,
+      doc_id: params.docId,
+      started_at: (/* @__PURE__ */ new Date()).toISOString(),
+      total_questions: params.questionCount,
+      correct_answers: 0
+    };
+    const { data, error } = await supabase.from("drill_sessions").insert(payload).select("id").maybeSingle();
+    if (error) {
+      console.warn("Failed to record review session", error);
+      return null;
+    }
+    return (_a = data == null ? void 0 : data.id) != null ? _a : payload.id;
+  } catch (err) {
+    console.warn("Unexpected review session logging failure", err);
+    return null;
+  }
+}
+
+const review_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: review_post
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const index_get = defineEventHandler(async (event) => {
+  var _a, _b, _c;
+  const query = getQuery$1(event);
+  const courseId = typeof query.courseId === "string" ? query.courseId : null;
+  const level = typeof query.level === "string" ? query.level : null;
+  const supabase = createServiceClient();
+  const { data: attempts, error } = await supabase.from("question_attempts").select("is_correct, created_at, session:drill_sessions(user_id, doc_id), questions(doc_id), id").gte("created_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1e3).toISOString());
+  if (error) {
+    throw createError({ statusCode: 500, statusMessage: error.message });
+  }
+  const sessionDocs = /* @__PURE__ */ new Map();
+  const questionDocs = /* @__PURE__ */ new Map();
+  (attempts || []).forEach((row) => {
+    var _a2;
+    if ((_a2 = row.session) == null ? void 0 : _a2.id) sessionDocs.set(row.id, row.session.doc_id || null);
+    if (row.questions) questionDocs.set(row.id, row.questions.doc_id || null);
+  });
+  const userStats = /* @__PURE__ */ new Map();
+  const docIds = Array.from(new Set(Array.from(questionDocs.values()).filter(Boolean)));
+  const { data: documents } = await supabase.from("documents").select("id, course_id, level").in("id", docIds);
+  const docMap = /* @__PURE__ */ new Map();
+  (documents || []).forEach((doc) => docMap.set(doc.id, doc));
+  for (const row of attempts || []) {
+    const userId = (_a = row.session) == null ? void 0 : _a.user_id;
+    if (!userId) continue;
+    const docId = questionDocs.get(row.id) || sessionDocs.get(row.id) || null;
+    const doc = docId ? docMap.get(docId) : null;
+    if (courseId && (doc == null ? void 0 : doc.course_id) !== courseId) continue;
+    if (level && (doc == null ? void 0 : doc.level) !== level) continue;
+    if (!userStats.has(userId)) {
+      userStats.set(userId, {
+        total: 0,
+        correct: 0,
+        docId,
+        courseId: (_b = doc == null ? void 0 : doc.course_id) != null ? _b : null,
+        level: (_c = doc == null ? void 0 : doc.level) != null ? _c : null
+      });
+    }
+    const stat = userStats.get(userId);
+    stat.total += 1;
+    if (row.is_correct) stat.correct += 1;
+  }
+  const profilesQuery = supabase.from("profiles").select("id, full_name, role").in("id", Array.from(userStats.keys()));
+  const { data: profiles } = await profilesQuery;
+  const profileMap = /* @__PURE__ */ new Map();
+  (profiles || []).forEach((p) => profileMap.set(p.id, p));
+  const { data: courseRows } = await supabase.from("courses").select("id, code").in(
+    "id",
+    Array.from(new Set(Array.from(userStats.values()).map((s) => s.courseId).filter(Boolean)))
+  );
+  const courseMap = /* @__PURE__ */ new Map();
+  (courseRows || []).forEach((c) => courseMap.set(c.id, c.code));
+  const leaderboard = Array.from(userStats.entries()).map(([userId, stat]) => {
+    var _a2;
+    return {
+      userId,
+      name: ((_a2 = profileMap.get(userId)) == null ? void 0 : _a2.full_name) || null,
+      level: stat.level,
+      courseId: stat.courseId,
+      courseCode: stat.courseId ? courseMap.get(stat.courseId) || null : null,
+      total: stat.total,
+      correct: stat.correct,
+      accuracy: stat.total ? Math.round(stat.correct / stat.total * 100) : 0
+    };
+  }).sort((a, b) => b.correct - a.correct || b.total - a.total).slice(0, 20);
+  return leaderboard;
+});
+
+const index_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: index_get
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const weakAreas_get = defineEventHandler(async (event) => {
+  var _a, _b, _c, _d, _e, _f, _g, _h;
+  const user = await serverSupabaseUser(event);
+  if (!user) {
+    throw createError({ statusCode: 401, statusMessage: "Sign in required" });
+  }
+  const supabase = createServiceClient();
+  const { data: sessions, error: sessionsError } = await supabase.from("drill_sessions").select("id, doc_id").eq("user_id", user.id);
+  if (sessionsError) {
+    throw createError({ statusCode: 500, statusMessage: sessionsError.message });
+  }
+  const sessionIds = (sessions || []).map((s) => s.id);
+  if (!sessionIds.length) return [];
+  const { data: attempts, error: attemptsError } = await supabase.from("question_attempts").select("session_id, question_id, is_correct").in("session_id", sessionIds);
+  if (attemptsError) {
+    throw createError({ statusCode: 500, statusMessage: attemptsError.message });
+  }
+  const questionIds = Array.from(new Set((attempts || []).map((a) => a.question_id)));
+  const { data: questions, error: questionsError } = await supabase.from("questions").select("id, doc_id, section_topic, topic_tags").in("id", questionIds);
+  if (questionsError) {
+    throw createError({ statusCode: 500, statusMessage: questionsError.message });
+  }
+  const docIds = Array.from(new Set((questions || []).map((q) => q.doc_id)));
+  const { data: documents, error: docsError } = await supabase.from("documents").select("id, course, course_code, title, course_id").in("id", docIds);
+  if (docsError) {
+    throw createError({ statusCode: 500, statusMessage: docsError.message });
+  }
+  const courseIds = Array.from(
+    new Set((documents || []).map((doc) => doc.course_id).filter(Boolean))
+  );
+  const { data: courses } = await supabase.from("courses").select("id, code, title").in("id", courseIds);
+  const courseMap = /* @__PURE__ */ new Map();
+  (courses || []).forEach((c) => {
+    courseMap.set(c.id, { code: c.code, title: c.title });
+  });
+  const questionMap = /* @__PURE__ */ new Map();
+  (questions || []).forEach((q) => questionMap.set(q.id, q));
+  const docMap = /* @__PURE__ */ new Map();
+  (documents || []).forEach((doc) => docMap.set(doc.id, doc));
+  const buckets = /* @__PURE__ */ new Map();
+  for (const attempt of attempts || []) {
+    const question = questionMap.get(attempt.question_id);
+    if (!question) continue;
+    const doc = docMap.get(question.doc_id);
+    const courseId = (_a = doc == null ? void 0 : doc.course_id) != null ? _a : null;
+    const courseCode = courseId ? (_c = (_b = courseMap.get(courseId)) == null ? void 0 : _b.code) != null ? _c : null : (_e = (_d = doc == null ? void 0 : doc.course_code) != null ? _d : doc == null ? void 0 : doc.course) != null ? _e : null;
+    const courseTitle = courseId ? (_g = (_f = courseMap.get(courseId)) == null ? void 0 : _f.title) != null ? _g : null : (_h = doc == null ? void 0 : doc.title) != null ? _h : null;
+    const topic = Array.isArray(question.topic_tags) && question.topic_tags.length ? String(question.topic_tags[0]) : question.section_topic || "General";
+    const key = `${courseId || "none"}::${topic}`;
+    if (!buckets.has(key)) {
+      buckets.set(key, {
+        courseId,
+        courseCode: courseCode || null,
+        courseTitle: courseTitle || null,
+        topic,
+        attempts: 0,
+        correct: 0,
+        accuracy: 0
+      });
+    }
+    const bucket = buckets.get(key);
+    bucket.attempts += 1;
+    if (attempt.is_correct) bucket.correct += 1;
+  }
+  const results = Array.from(buckets.values()).filter((b) => b.attempts >= 5).map((b) => ({
+    ...b,
+    accuracy: b.attempts ? Math.round(b.correct / b.attempts * 100) : 0
+  })).sort((a, b) => a.accuracy - b.accuracy);
+  return results.slice(0, 5);
+});
+
+const weakAreas_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: weakAreas_get
+}, Symbol.toStringTag, { value: 'Module' }));
+
+async function enrichQuestionStem(event, payload) {
+  var _a;
+  const config = useRuntimeConfig();
+  if (config.geminiDisabled) {
+    return null;
+  }
+  let userId = null;
+  try {
+    const user = await serverSupabaseUser(event);
+    userId = (_a = user == null ? void 0 : user.id) != null ? _a : null;
+  } catch {
+    userId = null;
+  }
+  await requireDocumentAccess({ docId: payload.docId, userId });
+  const response = await generateGeminiText({
+    systemInstruction: `You only return JSON with options, answer index, and explanation.`.trim(),
+    userParts: [
+      `Use ONLY the provided CONTEXT to propose plausible options for the stem.`,
+      `CONTEXT:
+${payload.context}`,
+      `STEM:
+${payload.stem}`,
+      `Return JSON exactly as { "options": ["..."], "answer": 0, "explanation": "..." }`
+    ],
+    responseMimeType: "application/json",
+    temperature: 0.2,
+    maxOutputTokens: 512
+  });
+  const normalized = normalizeEnrichResponse(response);
+  if (!normalized) return null;
+  return normalized;
+}
+const enrich_post = defineEventHandler(async (event) => {
+  const body = await readBody(event);
+  if (!(body == null ? void 0 : body.docId) || typeof body.docId !== "string") {
+    throw createError({ statusCode: 400, statusMessage: "docId is required." });
+  }
+  const stem = typeof body.stem === "string" ? body.stem.trim() : "";
+  if (!stem) {
+    throw createError({ statusCode: 400, statusMessage: "stem is required." });
+  }
+  const context = typeof body.context === "string" ? body.context.trim() : "";
+  if (!context) {
+    throw createError({ statusCode: 400, statusMessage: "context is required." });
+  }
+  const enriched = await enrichQuestionStem(event, {
+    docId: body.docId,
+    stem,
+    context
+  });
+  if (!enriched) {
+    throw createError({ statusCode: 500, statusMessage: "Failed to enrich question stem." });
+  }
+  return enriched;
+});
+function normalizeEnrichResponse(payload) {
+  const rawOptions = Array.isArray(payload == null ? void 0 : payload.options) ? payload.options : [];
+  const options = rawOptions.map(
+    (option) => typeof option === "string" ? option.trim() : option != null ? String(option) : ""
+  ).filter((option) => option.length > 0).slice(0, 5);
+  if (options.length < 2) return null;
+  const answerValue = payload == null ? void 0 : payload.answer;
+  const correct = typeof answerValue === "number" ? clamp$2(answerValue, 0, options.length - 1) : 0;
+  const explanation = typeof (payload == null ? void 0 : payload.explanation) === "string" && payload.explanation.trim().length ? payload.explanation.trim() : null;
+  return { options, correct, explanation };
+}
+function clamp$2(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+const enrich_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: enrich_post,
+  enrichQuestionStem: enrichQuestionStem
+}, Symbol.toStringTag, { value: 'Module' }));
+
+async function generateQuestionStems(event, payload) {
+  var _a;
+  const config = useRuntimeConfig();
+  if (config.geminiDisabled) {
+    return [];
+  }
+  let userId = null;
+  try {
+    const user = await serverSupabaseUser(event);
+    userId = (_a = user == null ? void 0 : user.id) != null ? _a : null;
+  } catch {
+    userId = null;
+  }
+  await requireDocumentAccess({ docId: payload.docId, userId });
+  const count = clamp$1(typeof payload.count === "number" ? payload.count : 3, 1, 10);
+  const response = await generateGeminiText({
+    systemInstruction: `You are a strict JSON generator that only returns question stems.`.trim(),
+    userParts: [
+      `Use ONLY the provided CONTEXT to create concise question stems for Nigerian nursing students.`,
+      `CONTEXT:
+${payload.context}`,
+      `Return ${count} stems as JSON with a questions array of plain strings. No options or answers.`
+    ],
+    responseMimeType: "application/json",
+    temperature: 0.2,
+    maxOutputTokens: 512
+  });
+  const stemsSource = Array.isArray(response == null ? void 0 : response.questions) ? response.questions : Array.isArray(response) ? response : [];
+  const stems = [];
+  for (const stem of stemsSource) {
+    const value = typeof stem === "string" ? stem : typeof (stem == null ? void 0 : stem.stem) === "string" ? stem.stem : "";
+    const normalized = value.trim();
+    if (normalized.length) {
+      stems.push(normalized);
+    }
+    if (stems.length >= count) break;
+  }
+  return stems;
+}
+const stems_post = defineEventHandler(async (event) => {
+  const body = await readBody(event);
+  if (!(body == null ? void 0 : body.docId) || typeof body.docId !== "string") {
+    throw createError({ statusCode: 400, statusMessage: "docId is required." });
+  }
+  const context = typeof body.context === "string" ? body.context.trim() : "";
+  if (!context) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "context is required and must be non-empty."
+    });
+  }
+  const stems = await generateQuestionStems(event, {
+    docId: body.docId,
+    context,
+    count: body.count
+  });
+  return { stems };
+});
+function clamp$1(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+const stems_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: stems_post,
+  generateQuestionStems: generateQuestionStems
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const generate_post = defineEventHandler(async (event) => {
@@ -2755,80 +3377,46 @@ const generate_post = defineEventHandler(async (event) => {
       statusMessage: "context is required and must be non-empty."
     });
   }
-  const supabase = createServiceClient();
-  const { data: doc, error: docError } = await supabase.from("documents").select("id, user_id, course, title").eq("id", body.docId).maybeSingle();
-  if (docError) {
-    throw createError({ statusCode: 500, statusMessage: docError.message });
-  }
-  if (!doc) {
-    throw createError({ statusCode: 404, statusMessage: "Document not found." });
-  }
-  if (userId && doc.user_id !== userId) {
-    throw createError({
-      statusCode: 403,
-      statusMessage: "You do not have access to this document."
-    });
-  }
-  const mode = body.mode === "short-answer" ? "short-answer" : "mcq";
+  const { doc, supabase } = await requireDocumentAccess({
+    docId: body.docId,
+    userId,
+    supabase: createServiceClient(),
+    fields: "id, user_id, course, title, course_code"
+  });
   const count = clamp(typeof body.count === "number" ? body.count : 5, 1, 10);
   try {
-    const geminiResponse = await generateGeminiText({
-      systemInstruction: `
-You are an exam question generator for Joseph Ayo Babalola University nursing students.
-
-You MUST always respond with a single valid JSON object and nothing else.
-No markdown, no code fences, no comments, no extra text.
-
-The JSON MUST match this type exactly:
-
-{
-  "questions": [
-    {
-      "question": string,
-      "options": [string, string, string, string],
-      "answer": 0 | 1 | 2 | 3,
-      "explanation": string
-    }
-  ]
-}
-
-- "question": the question stem.
-- "options": four distinct answer options for MCQ.
-- "answer": the index (0-3) of the correct option.
-- "explanation": a short explanation of the answer.
-
-Do not add any other properties. Do not wrap the JSON in backticks.
-`.trim(),
-      userParts: [
-        `Use ONLY the text below as your source material for generating questions for JABU Nursing students.
-
-CONTEXT:
-${context}`,
-        `Generate ${count} ${mode === "mcq" ? "4-option multiple-choice" : "short-answer"} exam-style questions.`,
-        mode === "mcq" ? 'For each question, fill "options" with four options and set "answer" to the index (0-3) of the correct one. Respond ONLY with the JSON object.' : 'For each short-answer question, you may leave "options" as an empty array and set "answer" to 0. Respond ONLY with the JSON object.'
-      ],
-      responseMimeType: "application/json",
-      temperature: 0.2,
-      maxOutputTokens: 1024
+    const stems = await generateQuestionStems(event, {
+      docId: body.docId,
+      context,
+      count
     });
-    const questions = normalizeGeminiQuestions(geminiResponse, mode, count);
-    if (!questions.length) {
-      return {
-        success: true,
-        docId: body.docId,
-        created: 0
-      };
+    if (!stems.length) {
+      return { success: true, docId: body.docId, created: 0 };
     }
-    const sectionTitle = ((_b = body.sectionTitle) == null ? void 0 : _b.trim()) || doc.title || doc.course || "Generated Section";
-    const rows = questions.map((question) => ({
-      id: randomUUID(),
-      doc_id: body.docId,
-      section_topic: sectionTitle,
-      stem: question.stem,
-      options: question.options,
-      correct: question.correct,
-      explanation: question.explanation
-    }));
+    const sectionTitle = ((_b = body.sectionTitle) == null ? void 0 : _b.trim()) || doc.title || doc.course || doc.course_code || "Generated Section";
+    const rows = [];
+    for (const stem of stems) {
+      const enriched = await enrichQuestionStem(event, {
+        docId: body.docId,
+        stem,
+        context
+      });
+      if (!enriched) continue;
+      rows.push({
+        id: randomUUID(),
+        doc_id: body.docId,
+        section_topic: sectionTitle,
+        stem,
+        options: enriched.options,
+        correct: enriched.correct,
+        explanation: enriched.explanation || null,
+        difficulty: "medium",
+        topic_tags: []
+      });
+    }
+    if (!rows.length) {
+      return { success: true, docId: body.docId, created: 0 };
+    }
     const { error: insertError } = await supabase.from("questions").insert(rows);
     if (insertError) {
       console.error("Failed to insert generated questions", insertError);
@@ -2853,50 +3441,6 @@ ${context}`,
     });
   }
 });
-function normalizeGeminiQuestions(payload, mode, limit) {
-  var _a, _b, _c;
-  const rawQuestions = Array.isArray(payload == null ? void 0 : payload.questions) ? payload.questions : Array.isArray(payload) ? payload : [];
-  const normalized = [];
-  for (const raw of rawQuestions) {
-    const stemCandidate = typeof (raw == null ? void 0 : raw.stem) === "string" ? raw.stem : typeof (raw == null ? void 0 : raw.question) === "string" ? raw.question : typeof (raw == null ? void 0 : raw.prompt) === "string" ? raw.prompt : "";
-    const stem = stemCandidate.trim();
-    if (!stem) continue;
-    const explanation = typeof (raw == null ? void 0 : raw.explanation) === "string" && raw.explanation.trim().length ? raw.explanation.trim() : null;
-    const options = mode === "mcq" ? sanitizeOptions(Array.isArray(raw == null ? void 0 : raw.options) ? raw.options : (raw == null ? void 0 : raw.choices) || []) : [];
-    if (mode === "mcq" && options.length < 2) {
-      continue;
-    }
-    const answerValue = (_c = (_b = (_a = raw == null ? void 0 : raw.answer) != null ? _a : raw == null ? void 0 : raw.correct) != null ? _b : raw == null ? void 0 : raw.correctIndex) != null ? _c : raw == null ? void 0 : raw.answerIndex;
-    let correct = -1;
-    if (mode === "mcq") {
-      if (typeof answerValue === "number") {
-        correct = clamp(answerValue, 0, options.length - 1);
-      } else if (typeof answerValue === "string") {
-        const idx = options.findIndex(
-          (option) => option.toLowerCase() === answerValue.trim().toLowerCase()
-        );
-        correct = idx >= 0 ? idx : 0;
-      } else {
-        correct = 0;
-      }
-    }
-    normalized.push({
-      stem,
-      options,
-      correct,
-      explanation
-    });
-    if (normalized.length >= limit) {
-      break;
-    }
-  }
-  return normalized;
-}
-function sanitizeOptions(values) {
-  return values.map(
-    (value) => typeof value === "string" ? value.trim() : typeof value === "number" ? String(value) : ""
-  ).filter((value) => value.length > 0).slice(0, 5);
-}
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }

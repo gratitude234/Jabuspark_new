@@ -15,11 +15,41 @@ declare module "nitropack/types" {
     '/api/ask': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/ask.post').default>>>>
     }
+    '/api/courses/enrol': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/courses/enrol.post').default>>>>
+    }
+    '/api/courses/enrolments': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/courses/enrolments.get').default>>>>
+    }
+    '/api/courses': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/courses/index.get').default>>>>
+    }
+    '/api/courses/unenrol': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/courses/unenrol.post').default>>>>
+    }
     '/api/drill': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/drill.post').default>>>>
     }
+    '/api/drill/attempts': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/drill/attempts.post').default>>>>
+    }
+    '/api/drill/review': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/drill/review.post').default>>>>
+    }
+    '/api/leaderboard': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/leaderboard/index.get').default>>>>
+    }
+    '/api/me/weak-areas': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/me/weak-areas.get').default>>>>
+    }
+    '/api/questions/enrich': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/questions/enrich.post').default>>>>
+    }
     '/api/questions/generate': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/questions/generate.post').default>>>>
+    }
+    '/api/questions/stems': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/questions/stems.post').default>>>>
     }
     '/api/rag/ingest': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/rag/ingest.post').default>>>>

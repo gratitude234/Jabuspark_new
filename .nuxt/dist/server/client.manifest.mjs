@@ -1,1 +1,1 @@
-export { default } from "file:///C:/Users/hp/Downloads/JabuSpark/node_modules/@nuxt/vite-builder/dist/runtime/client.manifest.mjs"
+export { default } from "file:///C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/@nuxt/vite-builder/dist/runtime/client.manifest.mjs"

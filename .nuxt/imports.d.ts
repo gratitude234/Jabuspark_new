@@ -32,6 +32,7 @@ export { useProfile } from '../composables/useProfile';
 export { useReadyDocs } from '../composables/useReadyDocs';
 export { getAvatarInitials } from '../utils/avatar';
 export { useAuth } from '../stores/useAuth';
+export { useCourses, CourseRow } from '../stores/useCourses';
 export { useLibrary } from '../stores/useLibrary';
 export { useToasts } from '../stores/useToasts';
 export { useSupabaseClient } from '../node_modules/@nuxtjs/supabase/dist/runtime/composables/useSupabaseClient';

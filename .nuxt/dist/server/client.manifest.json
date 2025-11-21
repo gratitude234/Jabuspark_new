@@ -7,12 +7,12 @@
     "module": true,
     "resourceType": "script"
   },
-  "C:/Users/hp/Downloads/JabuSpark/node_modules/nuxt/dist/app/entry.js": {
+  "C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/nuxt/dist/app/entry.js": {
     "resourceType": "script",
     "module": true,
     "prefetch": true,
     "preload": true,
     "isEntry": true,
-    "file": "C:/Users/hp/Downloads/JabuSpark/node_modules/nuxt/dist/app/entry.js"
+    "file": "C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/nuxt/dist/app/entry.js"
   }
 }

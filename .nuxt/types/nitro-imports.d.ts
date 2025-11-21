@@ -97,6 +97,7 @@ declare global {
   const readRawBody: typeof import('../../node_modules/h3').readRawBody
   const readValidatedBody: typeof import('../../node_modules/h3').readValidatedBody
   const removeResponseHeader: typeof import('../../node_modules/h3').removeResponseHeader
+  const requireDocumentAccess: typeof import('../../server/utils/documents').requireDocumentAccess
   const requireTutorOrAdminRole: typeof import('../../server/utils/admin').requireTutorOrAdminRole
   const runTask: typeof import('../../node_modules/nitropack/dist/runtime/internal/task').runTask
   const sanitizeStatusCode: typeof import('../../node_modules/h3').sanitizeStatusCode
@@ -152,11 +153,12 @@ export { useEvent } from 'nitropack/runtime/internal/context';
 export { defineTask, runTask } from 'nitropack/runtime/internal/task';
 export { defineNitroErrorHandler } from 'nitropack/runtime/internal/error/utils';
 export { appendCorsHeaders, appendCorsPreflightHeaders, appendHeader, appendHeaders, appendResponseHeader, appendResponseHeaders, assertMethod, callNodeListener, clearResponseHeaders, clearSession, createApp, createAppEventHandler, createError, createEvent, createEventStream, createRouter, defaultContentType, defineEventHandler, defineLazyEventHandler, defineNodeListener, defineNodeMiddleware, defineRequestMiddleware, defineResponseMiddleware, defineWebSocket, defineWebSocketHandler, deleteCookie, dynamicEventHandler, eventHandler, fetchWithEvent, fromNodeMiddleware, fromPlainHandler, fromWebHandler, getCookie, getHeader, getHeaders, getMethod, getProxyRequestHeaders, getQuery, getRequestFingerprint, getRequestHeader, getRequestHeaders, getRequestHost, getRequestIP, getRequestPath, getRequestProtocol, getRequestURL, getRequestWebStream, getResponseHeader, getResponseHeaders, getResponseStatus, getResponseStatusText, getRouterParam, getRouterParams, getSession, getValidatedQuery, getValidatedRouterParams, handleCacheHeaders, handleCors, isCorsOriginAllowed, isError, isEvent, isEventHandler, isMethod, isPreflightRequest, isStream, isWebResponse, lazyEventHandler, parseCookies, promisifyNodeListener, proxyRequest, readBody, readFormData, readMultipartFormData, readRawBody, readValidatedBody, removeResponseHeader, sanitizeStatusCode, sanitizeStatusMessage, sealSession, send, sendError, sendIterable, sendNoContent, sendProxy, sendRedirect, sendStream, sendWebResponse, serveStatic, setCookie, setHeader, setHeaders, setResponseHeader, setResponseHeaders, setResponseStatus, splitCookiesString, toEventHandler, toNodeListener, toPlainHandler, toWebHandler, toWebRequest, unsealSession, updateSession, useBase, useSession, writeEarlyHints } from 'h3';
-export { buildAssetsURL as __buildAssetsURL, publicAssetsURL as __publicAssetsURL } from 'C:/Users/hp/Downloads/JabuSpark/node_modules/nuxt/dist/core/runtime/nitro/utils/paths';
-export { defineAppConfig } from 'C:/Users/hp/Downloads/JabuSpark/node_modules/nuxt/dist/core/runtime/nitro/utils/config';
-export { requireTutorOrAdminRole } from 'C:/Users/hp/Downloads/JabuSpark/server/utils/admin';
-export { embedText, embedTexts } from 'C:/Users/hp/Downloads/JabuSpark/server/utils/embeddings';
-export { generateGeminiText } from 'C:/Users/hp/Downloads/JabuSpark/server/utils/gemini';
-export { extractPdfPages } from 'C:/Users/hp/Downloads/JabuSpark/server/utils/pdf';
-export { chunkPages, cosineSimilarity, composeAnswer } from 'C:/Users/hp/Downloads/JabuSpark/server/utils/retrieval';
-export { createServiceClient } from 'C:/Users/hp/Downloads/JabuSpark/server/utils/supabase';
+export { buildAssetsURL as __buildAssetsURL, publicAssetsURL as __publicAssetsURL } from 'C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/nuxt/dist/core/runtime/nitro/utils/paths';
+export { defineAppConfig } from 'C:/Users/hp/Documents/JABUSPARK-MVP/node_modules/nuxt/dist/core/runtime/nitro/utils/config';
+export { requireTutorOrAdminRole } from 'C:/Users/hp/Documents/JABUSPARK-MVP/server/utils/admin';
+export { requireDocumentAccess } from 'C:/Users/hp/Documents/JABUSPARK-MVP/server/utils/documents';
+export { embedText, embedTexts } from 'C:/Users/hp/Documents/JABUSPARK-MVP/server/utils/embeddings';
+export { generateGeminiText } from 'C:/Users/hp/Documents/JABUSPARK-MVP/server/utils/gemini';
+export { extractPdfPages } from 'C:/Users/hp/Documents/JABUSPARK-MVP/server/utils/pdf';
+export { chunkPages, cosineSimilarity, composeAnswer } from 'C:/Users/hp/Documents/JABUSPARK-MVP/server/utils/retrieval';
+export { createServiceClient } from 'C:/Users/hp/Documents/JABUSPARK-MVP/server/utils/supabase';
