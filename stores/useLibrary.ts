@@ -47,7 +47,6 @@ export const useLibrary = defineStore('library', {
         faculty?: string | null
         department?: string | null
         isPublic?: boolean | null
-        courseId?: string | null
       },
     ) {
       const auth = useAuth()
@@ -64,7 +63,6 @@ export const useLibrary = defineStore('library', {
       const faculty = options?.faculty ?? null
       const department = options?.department ?? null
       const isPublic = options?.isPublic ?? false
-      const courseId = options?.courseId ?? null
       const approvalStatus = visibility === 'course' ? 'pending' : 'approved'
       const { error: storageError } = await client.storage.from('docs').upload(path, file, {
         upsert: true,
@@ -86,7 +84,6 @@ export const useLibrary = defineStore('library', {
           chunks_count: null,
           visibility,
           approval_status: approvalStatus,
-          course_id: courseId,
           level,
           faculty,
           department,

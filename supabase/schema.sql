@@ -197,9 +197,6 @@ alter table public.questions
   add column if not exists topic_tags text[];
 
 alter table public.documents
-  add column if not exists course_id uuid references public.courses(id) on delete set null;
-
-alter table public.documents
   drop constraint if exists documents_status_check;
 
 alter table public.documents

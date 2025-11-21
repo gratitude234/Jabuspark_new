@@ -377,10 +377,6 @@ const statusFilter = ref<'all' | 'ready' | 'processing' | 'failed'>('all')
 const courseFilter = ref<'all' | string>('all')
 const courseCodeFilter = ref('')
 const levelFilter = ref<'all' | string>('all')
-const selectedCourseId = computed({
-  get: () => coursesStore.selectedCourseId,
-  set: (value) => coursesStore.selectCourse(value),
-})
 
 const statusOptions = [
   { value: 'all' as const, label: 'All' },

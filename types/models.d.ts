@@ -16,8 +16,6 @@ export interface DocumentRow {
   level?: string | null
   faculty?: string | null
   department?: string | null
-  course_id?: string | null
-  courses?: { id: string; code: string; title: string; level?: string | null } | null
   is_public?: boolean | null
   status: DocumentStatus
   error_message: string | null

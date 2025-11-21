@@ -457,7 +457,6 @@ watch(
       stats.correct = 0
       stats.accuracy = 0
       stats.last7 = 0
-      weakAreas.value = []
     }
   },
 )
@@ -518,16 +517,6 @@ async function fetchStats() {
     stats.last7 = last7
   } catch (err) {
     console.warn('Failed to fetch drill stats', err)
-  }
-}
-
-async function fetchWeakAreas() {
-  if (!auth.user) return
-  try {
-    const data = await $fetch<typeof weakAreas.value>('/api/me/weak-areas')
-    weakAreas.value = data || []
-  } catch (err) {
-    console.warn('Failed to fetch weak areas', err)
   }
 }
 
