@@ -104,9 +104,34 @@ export async function generateGeminiText({
   }
 
   const candidate = payload?.candidates?.[0]
+
+  // If there is no candidate at all, **soft-fail** for JSON mode, hard-fail for text mode
+  if (!candidate) {
+    console.error(
+      'Gemini returned no candidates',
+      JSON.stringify(payload?.promptFeedback || payload, null, 2),
+    )
+
+    if (responseMimeType === 'application/json') {
+      // For structured JSON callers (like questions) just give empty result
+      return { questions: [] }
+    }
+
+    const blockReason =
+      payload?.promptFeedback?.blockReason ||
+      payload?.promptFeedback?.safetyRatings?.[0]?.category ||
+      'unknown'
+    throw createError({
+      statusCode: 502,
+      statusMessage: `Gemini returned no content (block reason: ${blockReason})`,
+    })
+  }
+
   const parts = candidate?.content?.parts || []
 
-  // If caller asked for JSON, return parsed JSON object
+  // ─────────────────────────────
+  // JSON MODE (question generator etc.)
+  // ─────────────────────────────
   if (responseMimeType === 'application/json') {
     let combined = parts
       .map((p: any) => p.text || '')
@@ -114,10 +139,16 @@ export async function generateGeminiText({
       .trim()
 
     if (!combined) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Gemini returned empty JSON response',
-      })
+      // Soft fail: treat as "no questions", don't crash
+      console.warn('Gemini JSON empty response for structured call')
+      return { questions: [] }
+    }
+
+    // 0) Try to keep only the JSON object if there is extra noise
+    const firstBrace = combined.indexOf('{')
+    const lastBrace = combined.lastIndexOf('}')
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      combined = combined.slice(firstBrace, lastBrace + 1)
     }
 
     // 1) strip ```json ... ``` fences if present
@@ -129,15 +160,16 @@ export async function generateGeminiText({
     try {
       return JSON.parse(combined)
     } catch (err) {
+      // At this point Gemini gave us broken JSON. Log it but don't crash the app.
       console.error('Gemini JSON content parse failed', combined, err)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Gemini returned invalid JSON content.',
-      })
+      // Soft-fail: return an object the caller can treat as "no questions".
+      return { questions: [] }
     }
   }
 
-  // Default: return plain text
+  // ─────────────────────────────
+  // TEXT MODE (Ask chat etc.)
+  // ─────────────────────────────
   const fullText = parts
     .map((p: any) => p.text || '')
     .join('')

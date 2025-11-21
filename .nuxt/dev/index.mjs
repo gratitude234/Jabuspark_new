@@ -3,43 +3,43 @@ import { Server } from 'node:http';
 import { resolve, dirname, join } from 'node:path';
 import nodeCrypto, { randomUUID } from 'node:crypto';
 import { parentPort, threadId } from 'node:worker_threads';
-import { defineEventHandler, handleCacheHeaders, splitCookiesString, createEvent, fetchWithEvent, isEvent, eventHandler, setHeaders, sendRedirect, proxyRequest, getRequestHeader, setResponseHeaders, setResponseStatus, send, getRequestHeaders, setResponseHeader, appendResponseHeader, getRequestURL, getResponseHeader, removeResponseHeader, createError, getQuery as getQuery$1, readBody, createApp, createRouter as createRouter$1, toNodeListener, lazyEventHandler, getResponseStatus, getRouterParam, setCookie, getHeader, getResponseStatusText } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/h3/dist/index.mjs';
-import { escapeHtml } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/@vue/shared/dist/shared.cjs.js';
-import pdf from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/pdf-parse/index.js';
-import { createClient } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/@supabase/supabase-js/dist/main/index.js';
-import { createServerClient, parseCookieHeader } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/@supabase/ssr/dist/main/index.js';
-import { createRenderer, getRequestDependencies, getPreloadLinks, getPrefetchLinks } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/vue-bundle-renderer/dist/runtime.mjs';
-import { parseURL, withoutBase, joinURL, getQuery, withQuery, withTrailingSlash, decodePath, withLeadingSlash, withoutTrailingSlash, joinRelativeURL } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/ufo/dist/index.mjs';
-import { renderToString } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/vue/server-renderer/index.mjs';
-import { klona } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/klona/dist/index.mjs';
-import defu, { defuFn } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/defu/dist/defu.mjs';
-import destr, { destr as destr$1 } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/destr/dist/index.mjs';
-import { snakeCase } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/scule/dist/index.mjs';
-import { createHead as createHead$1, propsToString, renderSSRHead } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/unhead/dist/server.mjs';
-import { stringify, uneval } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/devalue/index.js';
-import { isVNode, toValue, isRef } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/vue/index.mjs';
-import { DeprecationsPlugin, PromisesPlugin, TemplateParamsPlugin, AliasSortingPlugin } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/unhead/dist/plugins.mjs';
-import { createHooks } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/hookable/dist/index.mjs';
-import { createFetch, Headers as Headers$1 } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/ofetch/dist/node.mjs';
-import { fetchNodeRequestHandler, callNodeRequestHandler } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/node-mock-http/dist/index.mjs';
-import { createStorage, prefixStorage } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/unstorage/dist/index.mjs';
-import unstorage_47drivers_47fs from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/unstorage/drivers/fs.mjs';
-import { digest } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/ohash/dist/index.mjs';
-import { toRouteMatcher, createRouter } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/radix3/dist/index.mjs';
+import { defineEventHandler, handleCacheHeaders, splitCookiesString, createEvent, fetchWithEvent, isEvent, eventHandler, setHeaders, sendRedirect, proxyRequest, getRequestHeader, setResponseHeaders, setResponseStatus, send, getRequestHeaders, setResponseHeader, appendResponseHeader, getRequestURL, getResponseHeader, removeResponseHeader, createError, getQuery as getQuery$1, readBody, createApp, createRouter as createRouter$1, toNodeListener, lazyEventHandler, getResponseStatus, getRouterParam, setCookie, getHeader, getResponseStatusText } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/h3/dist/index.mjs';
+import { escapeHtml } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/@vue/shared/dist/shared.cjs.js';
+import pdf from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/pdf-parse/index.js';
+import { createClient } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/@supabase/supabase-js/dist/main/index.js';
+import { createServerClient, parseCookieHeader } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/@supabase/ssr/dist/main/index.js';
+import { createRenderer, getRequestDependencies, getPreloadLinks, getPrefetchLinks } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/vue-bundle-renderer/dist/runtime.mjs';
+import { parseURL, withoutBase, joinURL, getQuery, withQuery, withTrailingSlash, decodePath, withLeadingSlash, withoutTrailingSlash, joinRelativeURL } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/ufo/dist/index.mjs';
+import { renderToString } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/vue/server-renderer/index.mjs';
+import { klona } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/klona/dist/index.mjs';
+import defu, { defuFn } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/defu/dist/defu.mjs';
+import destr, { destr as destr$1 } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/destr/dist/index.mjs';
+import { snakeCase } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/scule/dist/index.mjs';
+import { createHead as createHead$1, propsToString, renderSSRHead } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/unhead/dist/server.mjs';
+import { stringify, uneval } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/devalue/index.js';
+import { isVNode, toValue, isRef } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/vue/index.mjs';
+import { DeprecationsPlugin, PromisesPlugin, TemplateParamsPlugin, AliasSortingPlugin } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/unhead/dist/plugins.mjs';
+import { createHooks } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/hookable/dist/index.mjs';
+import { createFetch, Headers as Headers$1 } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/ofetch/dist/node.mjs';
+import { fetchNodeRequestHandler, callNodeRequestHandler } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/node-mock-http/dist/index.mjs';
+import { createStorage, prefixStorage } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/unstorage/dist/index.mjs';
+import unstorage_47drivers_47fs from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/unstorage/drivers/fs.mjs';
+import { digest } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/ohash/dist/index.mjs';
+import { toRouteMatcher, createRouter } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/radix3/dist/index.mjs';
 import { readFile } from 'node:fs/promises';
-import consola, { consola as consola$1 } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/consola/dist/index.mjs';
-import { ErrorParser } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/youch-core/build/index.js';
-import { Youch } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/nitropack/node_modules/youch/build/index.js';
-import { SourceMapConsumer } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/source-map/source-map.js';
+import consola, { consola as consola$1 } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/consola/dist/index.mjs';
+import { ErrorParser } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/youch-core/build/index.js';
+import { Youch } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/nitropack/node_modules/youch/build/index.js';
+import { SourceMapConsumer } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/source-map/source-map.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { getContext } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/unctx/dist/index.mjs';
-import { captureRawStackTrace, parseRawStackTrace } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/errx/dist/index.js';
+import { getContext } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/unctx/dist/index.mjs';
+import { captureRawStackTrace, parseRawStackTrace } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/errx/dist/index.js';
 import { promises } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname as dirname$1, resolve as resolve$1 } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/pathe/dist/index.mjs';
-import { walkResolver } from 'file://C:/Users/sam/jabuspark-mvp/apps/web/node_modules/unhead/dist/utils.mjs';
+import { dirname as dirname$1, resolve as resolve$1 } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/pathe/dist/index.mjs';
+import { walkResolver } from 'file://C:/Users/hp/Downloads/JabuSpark/node_modules/unhead/dist/utils.mjs';
 
-const serverAssets = [{"baseName":"server","dir":"C:/Users/sam/jabuspark-mvp/apps/web/server/assets"}];
+const serverAssets = [{"baseName":"server","dir":"C:/Users/hp/Downloads/JabuSpark/server/assets"}];
 
 const assets$1 = createStorage();
 
@@ -51,11 +51,11 @@ const storage = createStorage({});
 
 storage.mount('/assets', assets$1);
 
-storage.mount('root', unstorage_47drivers_47fs({"driver":"fs","readOnly":true,"base":"C:/Users/sam/jabuspark-mvp/apps/web","watchOptions":{"ignored":[null]}}));
-storage.mount('src', unstorage_47drivers_47fs({"driver":"fs","readOnly":true,"base":"C:/Users/sam/jabuspark-mvp/apps/web/server","watchOptions":{"ignored":[null]}}));
-storage.mount('build', unstorage_47drivers_47fs({"driver":"fs","readOnly":false,"base":"C:/Users/sam/jabuspark-mvp/apps/web/.nuxt"}));
-storage.mount('cache', unstorage_47drivers_47fs({"driver":"fs","readOnly":false,"base":"C:/Users/sam/jabuspark-mvp/apps/web/.nuxt/cache"}));
-storage.mount('data', unstorage_47drivers_47fs({"driver":"fs","base":"C:/Users/sam/jabuspark-mvp/apps/web/.data/kv"}));
+storage.mount('root', unstorage_47drivers_47fs({"driver":"fs","readOnly":true,"base":"C:/Users/hp/Downloads/JabuSpark","watchOptions":{"ignored":[null]}}));
+storage.mount('src', unstorage_47drivers_47fs({"driver":"fs","readOnly":true,"base":"C:/Users/hp/Downloads/JabuSpark/server","watchOptions":{"ignored":[null]}}));
+storage.mount('build', unstorage_47drivers_47fs({"driver":"fs","readOnly":false,"base":"C:/Users/hp/Downloads/JabuSpark/.nuxt"}));
+storage.mount('cache', unstorage_47drivers_47fs({"driver":"fs","readOnly":false,"base":"C:/Users/hp/Downloads/JabuSpark/.nuxt/cache"}));
+storage.mount('data', unstorage_47drivers_47fs({"driver":"fs","base":"C:/Users/hp/Downloads/JabuSpark/.data/kv"}));
 
 function useStorage(base = "") {
   return base ? prefixStorage(storage, base) : storage;
@@ -686,8 +686,8 @@ const _inlineRuntimeConfig = {
     }
   },
   "supabaseServiceKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmaXhxeWpid3Nzdmx4b2V6dGhtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2Mjk5MDY5MSwiZXhwIjoyMDc4NTY2NjkxfQ.cNki_zL4VxMLXTyCAo0WIPk7metq-JJ-7ZRni2zGSW0",
-  "geminiApiKey": "AIzaSyBklQA4z_RC_jgiZeTusA3_t1TGe5Tjmvo",
-  "geminiModelText": "models/gemini-2.5-flash",
+  "geminiApiKey": "AIzaSyDRIuoKi3v3xfSZhGlpcuxBL77YkAagUiA",
+  "geminiModelText": "models/gemini-2.5-pro",
   "geminiModelEmbedding": "models/text-embedding-004",
   "geminiDisabled": false,
   "supabase": {
@@ -1057,13 +1057,13 @@ if (!window.__NUXT_DEVTOOLS_TIME_METRIC__) {
 window.__NUXT_DEVTOOLS_TIME_METRIC__.appInit = Date.now()
 `;
 
-const _Y8FeMYBpEAtYGb9Go5KuAbGpIoGS6kqC8LVwMoH5c8 = (function(nitro) {
+const _KyPJxtZ8hN80uADY0Qy6tq6R9LL0DAw6JWqGF_FgRg = (function(nitro) {
   nitro.hooks.hook("render:html", (htmlContext) => {
     htmlContext.head.push(`<script>${script}<\/script>`);
   });
 });
 
-const rootDir = "C:/Users/sam/jabuspark-mvp/apps/web";
+const rootDir = "C:/Users/hp/Downloads/JabuSpark";
 
 const appHead = {"meta":[{"charset":"utf-8"},{"name":"theme-color","content":"#0f172a"},{"name":"viewport","content":"width=device-width, initial-scale=1"}],"link":[{"rel":"manifest","href":"/manifest.webmanifest"},{"rel":"icon","type":"image/png","sizes":"192x192","href":"/icons/icon-192.png"},{"rel":"icon","type":"image/png","sizes":"512x512","href":"/icons/icon-512.png"}],"style":[],"script":[],"noscript":[],"title":"JabuSpark"};
 
@@ -1082,7 +1082,7 @@ const devReducers = {
   URL: (data) => data instanceof URL ? data.toString() : void 0
 };
 const asyncContext = getContext("nuxt-dev", { asyncContext: true, AsyncLocalStorage });
-const _KbhCGuJ4tiYbi7EgcLp3Yd3YAb6Uha6TVE5ElI3t4 = (nitroApp) => {
+const _6D5zT291OWWh9OeMZ2774KRfl7ksAPw6u68dqDJvFpc = (nitroApp) => {
   const handler = nitroApp.h3App.handler;
   nitroApp.h3App.handler = (event) => {
     return asyncContext.callAsync({ logs: [], event }, () => handler(event));
@@ -1152,8 +1152,8 @@ function onConsoleLog(callback) {
 }
 
 const plugins = [
-  _Y8FeMYBpEAtYGb9Go5KuAbGpIoGS6kqC8LVwMoH5c8,
-_KbhCGuJ4tiYbi7EgcLp3Yd3YAb6Uha6TVE5ElI3t4
+  _KyPJxtZ8hN80uADY0Qy6tq6R9LL0DAw6JWqGF_FgRg,
+_6D5zT291OWWh9OeMZ2774KRfl7ksAPw6u68dqDJvFpc
 ];
 
 const assets = {};
@@ -1181,7 +1181,7 @@ function getAsset (id) {
 
 const METHODS = /* @__PURE__ */ new Set(["HEAD", "GET"]);
 const EncodingMap = { gzip: ".gz", br: ".br" };
-const _qiQiGH = eventHandler((event) => {
+const _1Rwqns = eventHandler((event) => {
   if (event.method && !METHODS.has(event.method)) {
     return;
   }
@@ -1319,8 +1319,8 @@ function publicAssetsURL(...path) {
 
 const APP_ROOT_OPEN_TAG = `<${appRootTag}${propsToString(appRootAttrs)}>`;
 const APP_ROOT_CLOSE_TAG = `</${appRootTag}>`;
-const getServerEntry = () => import('file://C:/Users/sam/jabuspark-mvp/apps/web/.nuxt/dist/server/server.mjs').then((r) => r.default || r);
-const getClientManifest = () => import('file://C:/Users/sam/jabuspark-mvp/apps/web/.nuxt/dist/server/client.manifest.mjs').then((r) => r.default || r).then((r) => typeof r === "function" ? r() : r);
+const getServerEntry = () => import('file://C:/Users/hp/Downloads/JabuSpark/.nuxt/dist/server/server.mjs').then((r) => r.default || r);
+const getClientManifest = () => import('file://C:/Users/hp/Downloads/JabuSpark/.nuxt/dist/server/client.manifest.mjs').then((r) => r.default || r).then((r) => typeof r === "function" ? r() : r);
 const getSSRRenderer = lazyCachedFunction(async () => {
   const manifest = await getClientManifest();
   if (!manifest) {
@@ -1566,27 +1566,27 @@ async function getIslandContext(event) {
   return ctx;
 }
 
-const _lazy_KDC40a = () => Promise.resolve().then(function () { return courseDocs_get$1; });
-const _lazy_Ahw3r0 = () => Promise.resolve().then(function () { return approve_post$1; });
-const _lazy_xtdrbp = () => Promise.resolve().then(function () { return archive_post$1; });
-const _lazy_fxqK5o = () => Promise.resolve().then(function () { return ask_post$1; });
-const _lazy_AmUAXY = () => Promise.resolve().then(function () { return drill_post$1; });
-const _lazy_kNmhdf = () => Promise.resolve().then(function () { return generate_post$1; });
-const _lazy_tIxlbn = () => Promise.resolve().then(function () { return ingest_post$1; });
-const _lazy_wew74B = () => Promise.resolve().then(function () { return renderer$1; });
+const _lazy__l0Dz4 = () => Promise.resolve().then(function () { return courseDocs_get$1; });
+const _lazy_fgakhl = () => Promise.resolve().then(function () { return approve_post$1; });
+const _lazy_XF2JrY = () => Promise.resolve().then(function () { return archive_post$1; });
+const _lazy_hm9YPr = () => Promise.resolve().then(function () { return ask_post$1; });
+const _lazy_VdaDbW = () => Promise.resolve().then(function () { return drill_post$1; });
+const _lazy_YC6bFj = () => Promise.resolve().then(function () { return generate_post$1; });
+const _lazy_J0N6Ht = () => Promise.resolve().then(function () { return ingest_post$1; });
+const _lazy_P9YZMf = () => Promise.resolve().then(function () { return renderer$1; });
 
 const handlers = [
-  { route: '', handler: _qiQiGH, lazy: false, middleware: true, method: undefined },
-  { route: '/api/admin/course-docs', handler: _lazy_KDC40a, lazy: true, middleware: false, method: "get" },
-  { route: '/api/admin/course-docs/approve', handler: _lazy_Ahw3r0, lazy: true, middleware: false, method: "post" },
-  { route: '/api/admin/course-docs/archive', handler: _lazy_xtdrbp, lazy: true, middleware: false, method: "post" },
-  { route: '/api/ask', handler: _lazy_fxqK5o, lazy: true, middleware: false, method: "post" },
-  { route: '/api/drill', handler: _lazy_AmUAXY, lazy: true, middleware: false, method: "post" },
-  { route: '/api/questions/generate', handler: _lazy_kNmhdf, lazy: true, middleware: false, method: "post" },
-  { route: '/api/rag/ingest', handler: _lazy_tIxlbn, lazy: true, middleware: false, method: "post" },
-  { route: '/__nuxt_error', handler: _lazy_wew74B, lazy: true, middleware: false, method: undefined },
+  { route: '', handler: _1Rwqns, lazy: false, middleware: true, method: undefined },
+  { route: '/api/admin/course-docs', handler: _lazy__l0Dz4, lazy: true, middleware: false, method: "get" },
+  { route: '/api/admin/course-docs/approve', handler: _lazy_fgakhl, lazy: true, middleware: false, method: "post" },
+  { route: '/api/admin/course-docs/archive', handler: _lazy_XF2JrY, lazy: true, middleware: false, method: "post" },
+  { route: '/api/ask', handler: _lazy_hm9YPr, lazy: true, middleware: false, method: "post" },
+  { route: '/api/drill', handler: _lazy_VdaDbW, lazy: true, middleware: false, method: "post" },
+  { route: '/api/questions/generate', handler: _lazy_YC6bFj, lazy: true, middleware: false, method: "post" },
+  { route: '/api/rag/ingest', handler: _lazy_J0N6Ht, lazy: true, middleware: false, method: "post" },
+  { route: '/__nuxt_error', handler: _lazy_P9YZMf, lazy: true, middleware: false, method: undefined },
   { route: '/__nuxt_island/**', handler: _SxA8c9, lazy: false, middleware: false, method: undefined },
-  { route: '/**', handler: _lazy_wew74B, lazy: true, middleware: false, method: undefined }
+  { route: '/**', handler: _lazy_P9YZMf, lazy: true, middleware: false, method: undefined }
 ];
 
 function createNitroApp() {
@@ -2065,7 +2065,7 @@ async function generateGeminiText({
   maxOutputTokens = 1024,
   responseMimeType
 }) {
-  var _a, _b;
+  var _a, _b, _c, _d, _e, _f;
   const config = useRuntimeConfig();
   const apiKey = config.geminiApiKey;
   const rawModel = config.geminiModelText || "gemini-2.5-flash";
@@ -2138,14 +2138,31 @@ async function generateGeminiText({
     });
   }
   const candidate = (_a = payload == null ? void 0 : payload.candidates) == null ? void 0 : _a[0];
-  const parts = ((_b = candidate == null ? void 0 : candidate.content) == null ? void 0 : _b.parts) || [];
+  if (!candidate) {
+    console.error(
+      "Gemini returned no candidates",
+      JSON.stringify((payload == null ? void 0 : payload.promptFeedback) || payload, null, 2)
+    );
+    if (responseMimeType === "application/json") {
+      return { questions: [] };
+    }
+    const blockReason = ((_b = payload == null ? void 0 : payload.promptFeedback) == null ? void 0 : _b.blockReason) || ((_e = (_d = (_c = payload == null ? void 0 : payload.promptFeedback) == null ? void 0 : _c.safetyRatings) == null ? void 0 : _d[0]) == null ? void 0 : _e.category) || "unknown";
+    throw createError({
+      statusCode: 502,
+      statusMessage: `Gemini returned no content (block reason: ${blockReason})`
+    });
+  }
+  const parts = ((_f = candidate == null ? void 0 : candidate.content) == null ? void 0 : _f.parts) || [];
   if (responseMimeType === "application/json") {
     let combined = parts.map((p) => p.text || "").join("").trim();
     if (!combined) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: "Gemini returned empty JSON response"
-      });
+      console.warn("Gemini JSON empty response for structured call");
+      return { questions: [] };
+    }
+    const firstBrace = combined.indexOf("{");
+    const lastBrace = combined.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      combined = combined.slice(firstBrace, lastBrace + 1);
     }
     combined = combined.replace(/```(?:json)?/gi, "").replace(/```/g, "").trim();
     combined = combined.replace(/,\s*(\]|\})/g, "$1");
@@ -2153,10 +2170,7 @@ async function generateGeminiText({
       return JSON.parse(combined);
     } catch (err) {
       console.error("Gemini JSON content parse failed", combined, err);
-      throw createError({
-        statusCode: 500,
-        statusMessage: "Gemini returned invalid JSON content."
-      });
+      return { questions: [] };
     }
   }
   const fullText = parts.map((p) => p.text || "").join("").trim();
@@ -2759,13 +2773,39 @@ const generate_post = defineEventHandler(async (event) => {
   const count = clamp(typeof body.count === "number" ? body.count : 5, 1, 10);
   try {
     const geminiResponse = await generateGeminiText({
-      systemInstruction: "You are an exam generator for Joseph Ayo Babalola University nursing students. Return ONLY strict JSON that matches the required shape.",
-      userParts: [
-        `Source context:
+      systemInstruction: `
+You are an exam question generator for Joseph Ayo Babalola University nursing students.
 
+You MUST always respond with a single valid JSON object and nothing else.
+No markdown, no code fences, no comments, no extra text.
+
+The JSON MUST match this type exactly:
+
+{
+  "questions": [
+    {
+      "question": string,
+      "options": [string, string, string, string],
+      "answer": 0 | 1 | 2 | 3,
+      "explanation": string
+    }
+  ]
+}
+
+- "question": the question stem.
+- "options": four distinct answer options for MCQ.
+- "answer": the index (0-3) of the correct option.
+- "explanation": a short explanation of the answer.
+
+Do not add any other properties. Do not wrap the JSON in backticks.
+`.trim(),
+      userParts: [
+        `Use ONLY the text below as your source material for generating questions for JABU Nursing students.
+
+CONTEXT:
 ${context}`,
-        `Generate ${count} ${mode === "mcq" ? "multiple-choice" : "short-answer"} questions using only this context.`,
-        'Format: {"questions":[{"question":"...", "options":["A","B","C","D"], "answer":0, "explanation":"..."}]} and omit any markdown or commentary.'
+        `Generate ${count} ${mode === "mcq" ? "4-option multiple-choice" : "short-answer"} exam-style questions.`,
+        mode === "mcq" ? 'For each question, fill "options" with four options and set "answer" to the index (0-3) of the correct one. Respond ONLY with the JSON object.' : 'For each short-answer question, you may leave "options" as an empty array and set "answer" to 0. Respond ONLY with the JSON object.'
       ],
       responseMimeType: "application/json",
       temperature: 0.2,
@@ -2773,10 +2813,11 @@ ${context}`,
     });
     const questions = normalizeGeminiQuestions(geminiResponse, mode, count);
     if (!questions.length) {
-      throw createError({
-        statusCode: 502,
-        statusMessage: "Gemini returned no usable questions."
-      });
+      return {
+        success: true,
+        docId: body.docId,
+        created: 0
+      };
     }
     const sectionTitle = ((_b = body.sectionTitle) == null ? void 0 : _b.trim()) || doc.title || doc.course || "Generated Section";
     const rows = questions.map((question) => ({

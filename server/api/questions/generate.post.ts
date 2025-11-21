@@ -71,12 +71,38 @@ export default defineEventHandler(async (event) => {
 
   try {
     const geminiResponse = (await generateGeminiText({
-      systemInstruction:
-        'You are an exam generator for Joseph Ayo Babalola University nursing students. Return ONLY strict JSON that matches the required shape.',
+      systemInstruction: `
+You are an exam question generator for Joseph Ayo Babalola University nursing students.
+
+You MUST always respond with a single valid JSON object and nothing else.
+No markdown, no code fences, no comments, no extra text.
+
+The JSON MUST match this type exactly:
+
+{
+  "questions": [
+    {
+      "question": string,
+      "options": [string, string, string, string],
+      "answer": 0 | 1 | 2 | 3,
+      "explanation": string
+    }
+  ]
+}
+
+- "question": the question stem.
+- "options": four distinct answer options for MCQ.
+- "answer": the index (0-3) of the correct option.
+- "explanation": a short explanation of the answer.
+
+Do not add any other properties. Do not wrap the JSON in backticks.
+`.trim(),
       userParts: [
-        `Source context:\n\n${context}`,
-        `Generate ${count} ${mode === 'mcq' ? 'multiple-choice' : 'short-answer'} questions using only this context.`,
-        'Format: {"questions":[{"question":"...", "options":["A","B","C","D"], "answer":0, "explanation":"..."}]} and omit any markdown or commentary.',
+        `Use ONLY the text below as your source material for generating questions for JABU Nursing students.\n\nCONTEXT:\n${context}`,
+        `Generate ${count} ${mode === 'mcq' ? '4-option multiple-choice' : 'short-answer'} exam-style questions.`,
+        mode === 'mcq'
+          ? 'For each question, fill "options" with four options and set "answer" to the index (0-3) of the correct one. Respond ONLY with the JSON object.'
+          : 'For each short-answer question, you may leave "options" as an empty array and set "answer" to 0. Respond ONLY with the JSON object.',
       ],
       responseMimeType: 'application/json',
       temperature: 0.2,
@@ -84,11 +110,14 @@ export default defineEventHandler(async (event) => {
     })) as Record<string, any>
 
     const questions = normalizeGeminiQuestions(geminiResponse, mode, count)
+
+    // 🔹 NEW BEHAVIOUR: if Gemini gives no usable questions, treat as success with 0 created
     if (!questions.length) {
-      throw createError({
-        statusCode: 502,
-        statusMessage: 'Gemini returned no usable questions.',
-      })
+      return {
+        success: true,
+        docId: body.docId,
+        created: 0,
+      }
     }
 
     const sectionTitle =
@@ -120,6 +149,7 @@ export default defineEventHandler(async (event) => {
     }
   } catch (err: any) {
     if (err?.statusCode) {
+      // errors from generateGeminiText come through here
       throw err
     }
     console.error('Question batch generation failed', err)
