@@ -134,6 +134,7 @@ const navItems = [
   { label: 'Dashboard', to: '/admin' },
   { label: 'Users', to: '/admin/users' },
   { label: 'Library', to: '/admin/library' },
+  { label: 'Questions', to: '/admin/questions' },
   { label: 'Drills', to: '/admin/drills' },
   { label: 'Reports', to: '/admin/reports' },
   { label: 'Settings', to: '/admin/settings' },
@@ -143,6 +144,7 @@ const pageTitle = computed(() => {
   if (route.meta?.title) return String(route.meta.title)
   if (route.path.startsWith('/admin/users')) return 'Users'
   if (route.path.startsWith('/admin/library')) return 'Library'
+  if (route.path.startsWith('/admin/questions')) return 'Questions'
   if (route.path.startsWith('/admin/drills')) return 'Drills'
   if (route.path.startsWith('/admin/reports')) return 'Reports'
   if (route.path.startsWith('/admin/settings')) return 'Settings'

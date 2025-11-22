@@ -66,23 +66,15 @@ export default defineEventHandler(async (event) => {
       return { success: true, docId: body.docId, created: 0 }
     }
 
-    const sectionTitle =
-      body.sectionTitle?.trim() ||
-      doc.title ||
-      doc.course ||
-      (doc as any).course_code ||
-      'Generated Section'
-
     const rows: Array<{
       id: string
-      doc_id: string
-      section_topic: string
+      document_id: string
       stem: string
       options: string[]
-      correct: number
+      correct_index: number
       explanation: string | null
       difficulty: string | null
-      topic_tags: string[] | null
+      page_hint: number | null
     }> = []
 
     for (const stem of stems) {
@@ -95,14 +87,13 @@ export default defineEventHandler(async (event) => {
 
       rows.push({
         id: randomUUID(),
-        doc_id: body.docId,
-        section_topic: sectionTitle,
+        document_id: body.docId,
         stem,
         options: enriched.options,
-        correct: enriched.correct,
+        correct_index: enriched.correct,
         explanation: enriched.explanation || null,
         difficulty: 'medium',
-        topic_tags: [],
+        page_hint: null,
       })
     }
 

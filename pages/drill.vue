@@ -203,6 +203,9 @@
     >
       {{ loading ? 'Generating…' : 'Start drill' }}
     </Button>
+    <p v-if="loadError" class="mt-2 text-xs text-amber-200">
+      {{ loadError }}
+    </p>
     </Card>
 
     <Card
@@ -369,6 +372,7 @@ const count = ref(10)
 const duration = ref(15)
 const mode = ref<'normal' | 'review'>('normal')
 const loading = ref(false)
+const loadError = ref<string | null>(null)
 const questions = ref<DrillQuestion[]>([])
 const responses = reactive<Record<string, number | null>>({})
 const submitted = ref(false)
@@ -517,18 +521,26 @@ async function fetchLeaderboard() {
 }
 
 async function startDrill() {
+  loadError.value = null
+
   if (!readyDocs.value.length) {
-    toasts.error('Upload and ingest a PDF first.')
+    const message = 'Upload and ingest a PDF first.'
+    loadError.value = message
+    toasts.error(message)
     return
   }
 
   if (count.value < 5 || count.value > 50) {
-    toasts.error('Pick between 5 and 50 questions.')
+    const message = 'Pick between 5 and 50 questions.'
+    loadError.value = message
+    toasts.error(message)
     return
   }
 
   if (duration.value < 5 || duration.value > 120) {
-    toasts.error('Countdown should be between 5 and 120 minutes.')
+    const message = 'Countdown should be between 5 and 120 minutes.'
+    loadError.value = message
+    toasts.error(message)
     return
   }
 
@@ -577,10 +589,13 @@ async function startDrill() {
     })
 
     if (questions.value.length) {
+      loadError.value = null
       startTimer()
     }
   } catch (error: any) {
-    toasts.error(error?.statusMessage || error?.message || 'Drill failed')
+    const message = error?.statusMessage || error?.message || 'Drill failed'
+    loadError.value = message
+    toasts.error(message)
   } finally {
     loading.value = false
   }

@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: attempts, error } = await supabase
     .from('question_attempts')
-    .select('is_correct, created_at, session:drill_sessions(user_id, doc_id), questions(doc_id), id')
+    .select('is_correct, created_at, session:drill_sessions(user_id, doc_id), questions(document_id), id')
     .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
 
   if (error) {
@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
   const questionDocs = new Map<string, string | null>()
   ;(attempts || []).forEach((row: any) => {
     if (row.session?.id) sessionDocs.set(row.id, row.session.doc_id || null)
-    if (row.questions) questionDocs.set(row.id, row.questions.doc_id || null)
+    if (row.questions) questionDocs.set(row.id, row.questions.document_id || null)
   })
 
   const userStats = new Map<

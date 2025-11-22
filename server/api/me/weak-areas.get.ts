@@ -44,14 +44,14 @@ export default defineEventHandler(async (event) => {
   const questionIds = Array.from(new Set((attempts || []).map((a) => a.question_id)))
   const { data: questions, error: questionsError } = await supabase
     .from('questions')
-    .select('id, doc_id, section_topic, topic_tags')
+    .select('id, document_id')
     .in('id', questionIds)
 
   if (questionsError) {
     throw createError({ statusCode: 500, statusMessage: questionsError.message })
   }
 
-  const docIds = Array.from(new Set((questions || []).map((q) => q.doc_id)))
+  const docIds = Array.from(new Set((questions || []).map((q) => q.document_id)))
   const { data: documents, error: docsError } = await supabase
     .from('documents')
     .select('id, course, course_code, title, course_id')
@@ -85,13 +85,11 @@ export default defineEventHandler(async (event) => {
   for (const attempt of attempts || []) {
     const question = questionMap.get(attempt.question_id)
     if (!question) continue
-    const doc = docMap.get(question.doc_id)
+    const doc = docMap.get(question.document_id)
     const courseId = doc?.course_id ?? null
     const courseCode = courseId ? courseMap.get(courseId)?.code ?? null : doc?.course_code ?? doc?.course ?? null
     const courseTitle = courseId ? courseMap.get(courseId)?.title ?? null : doc?.title ?? null
-    const topic = Array.isArray(question.topic_tags) && question.topic_tags.length
-      ? String(question.topic_tags[0])
-      : question.section_topic || 'General'
+    const topic = 'General'
 
     const key = `${courseId || 'none'}::${topic}`
     if (!buckets.has(key)) {

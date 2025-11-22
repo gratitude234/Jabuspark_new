@@ -38,6 +38,19 @@ export interface DrillQuestion {
   citations?: { docId: string; page: number; span: string }[]
 }
 
+export interface ManualQuestion {
+  id: string
+  document_id: string
+  stem: string
+  options: string[]
+  correct_index: number
+  explanation?: string | null
+  difficulty?: 'easy' | 'medium' | 'hard' | null
+  page_hint?: number | null
+  created_by?: string | null
+  created_at?: string | null
+}
+
 export interface DrillSession {
   id: string
   user_id: string

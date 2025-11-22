@@ -77,10 +77,38 @@ create policy "Chunks delete" on public.doc_chunks for delete using (
 create policy "Own sessions" on public.sessions for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "Own drills" on public.drills for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 
-create policy "Own questions" on public.questions for all using (
-  exists(select 1 from public.drills dr where dr.id = drill_id and dr.user_id = auth.uid())
+create policy "Questions readable" on public.questions for select using (
+  auth.role() = 'authenticated'
+);
+
+create policy "Questions admin insert" on public.questions for insert with check (
+  exists(
+    select 1 from public.profiles p
+    where p.id = auth.uid()
+      and p.role in ('admin','super_admin')
+  )
+);
+
+create policy "Questions admin update" on public.questions for update using (
+  exists(
+    select 1 from public.profiles p
+    where p.id = auth.uid()
+      and p.role in ('admin','super_admin')
+  )
 ) with check (
-  exists(select 1 from public.drills dr where dr.id = drill_id and dr.user_id = auth.uid())
+  exists(
+    select 1 from public.profiles p
+    where p.id = auth.uid()
+      and p.role in ('admin','super_admin')
+  )
+);
+
+create policy "Questions admin delete" on public.questions for delete using (
+  exists(
+    select 1 from public.profiles p
+    where p.id = auth.uid()
+      and p.role in ('admin','super_admin')
+  )
 );
 
 create policy "Own matches" on public.matches for all using (
