@@ -23,7 +23,8 @@
           <input
             v-model.trim="form.full_name"
             type="text"
-            class="w-full rounded-xl border border-white/10 bg-transparent px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-amber-300 focus:outline-none"
+            :disabled="saving || isLoading"
+            class="w-full rounded-xl border border-white/10 bg-transparent px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-amber-300 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
             placeholder="e.g. Adaeze Okonkwo"
           />
           <p v-if="errors.full_name" class="text-[11px] text-rose-300">
@@ -36,7 +37,8 @@
           <input
             v-model.trim="form.matric_no"
             type="text"
-            class="w-full rounded-xl border border-white/10 bg-transparent px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-amber-300 focus:outline-none"
+            :disabled="saving || isLoading"
+            class="w-full rounded-xl border border-white/10 bg-transparent px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-amber-300 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
             placeholder="e.g. JABU/20/1234"
           />
         </div>
@@ -46,7 +48,8 @@
             <label class="text-xs text-slate-400">Faculty</label>
             <select
               v-model="form.faculty"
-              class="w-full rounded-xl border border-white/10 bg-transparent px-3 py-2 text-sm text-slate-100 focus:border-amber-300 focus:outline-none"
+              :disabled="saving || isLoading"
+              class="w-full rounded-xl border border-white/10 bg-transparent px-3 py-2 text-sm text-slate-100 focus:border-amber-300 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
             >
               <option value="" class="bg-slate-900">Select faculty</option>
               <option v-for="option in facultyOptions" :key="option" :value="option" class="bg-slate-900">
@@ -59,7 +62,8 @@
             <label class="text-xs text-slate-400">Department</label>
             <select
               v-model="form.department"
-              class="w-full rounded-xl border border-white/10 bg-transparent px-3 py-2 text-sm text-slate-100 focus:border-amber-300 focus:outline-none"
+              :disabled="saving || isLoading"
+              class="w-full rounded-xl border border-white/10 bg-transparent px-3 py-2 text-sm text-slate-100 focus:border-amber-300 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
             >
               <option value="" class="bg-slate-900">Select department</option>
               <option
@@ -81,7 +85,8 @@
           <label class="text-xs text-slate-400">Level</label>
           <select
             v-model="form.level"
-            class="w-full rounded-xl border border-white/10 bg-transparent px-3 py-2 text-sm text-slate-100 focus:border-amber-300 focus:outline-none"
+            :disabled="saving || isLoading"
+            class="w-full rounded-xl border border-white/10 bg-transparent px-3 py-2 text-sm text-slate-100 focus:border-amber-300 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
           >
             <option value="" class="bg-slate-900">Select level</option>
             <option v-for="levelOption in levelOptions" :key="levelOption" :value="levelOption" class="bg-slate-900">
@@ -96,13 +101,16 @@
         <p v-if="profileError" class="text-xs text-rose-300">
           {{ profileError }}
         </p>
+        <p v-if="submitError" class="text-xs text-rose-300">
+          {{ submitError }}
+        </p>
 
         <Button
           type="submit"
           class="w-full"
           :disabled="saving || isLoading"
         >
-          {{ saving ? 'Saving…' : 'Save profile' }}
+          {{ saving ? 'Saving...' : 'Save profile' }}
         </Button>
       </form>
     </Card>
@@ -116,6 +124,7 @@ import Card from '~/components/Card.vue'
 import { useToasts } from '~/stores/useToasts'
 
 const router = useRouter()
+const route = useRoute()
 const user = useSupabaseUser()
 const supabase = useSupabaseClient()
 const toasts = useToasts()
@@ -192,8 +201,13 @@ const form = reactive({
 
 const errors = reactive<Record<string, string>>({})
 const saving = ref(false)
+const submitError = ref<string | null>(null)
 
-// preload from profile when it’s available
+const redirectPath = computed(() =>
+  typeof route.query.redirect === 'string' && route.query.redirect ? route.query.redirect : '/',
+)
+
+// preload from profile when it's available
 watch(
   profile,
   (value) => {
@@ -225,6 +239,7 @@ async function handleSubmit() {
   if (!validate() || !user.value) return
 
   saving.value = true
+  submitError.value = null
 
   try {
     const payload = {
@@ -248,10 +263,11 @@ async function handleSubmit() {
     await refreshProfile()
 
     toasts.success('Profile updated.')
-    await router.push('/')
-  } catch (err) {
+    await router.push(redirectPath.value || '/')
+  } catch (err: any) {
     console.error('Onboarding save failed:', err)
-    toasts.error('Could not save your profile. Try again.')
+    submitError.value = err?.message || 'Could not save your profile. Try again.'
+    toasts.error(submitError.value)
   } finally {
     saving.value = false
   }

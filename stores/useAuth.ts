@@ -58,12 +58,13 @@ export const useAuth = defineStore('auth', {
     async ensureProfile(user: User | null) {
       if (!user) return
       const client = useSupabaseClient()
-      const payload: Partial<Profile> & { id: string } = {
-        id: user.id,
-        full_name: user.user_metadata?.full_name ?? user.email ?? '',
-        avatar_url: user.user_metadata?.avatar_url ?? null,
-        email: user.email ?? null,
-      }
+      const payload: Partial<Profile> & { id: string } = { id: user.id }
+
+      // Only send fields we actually have to avoid overwriting profile data with fallbacks
+      if (user.email) payload.email = user.email
+      if (user.user_metadata?.full_name) payload.full_name = user.user_metadata.full_name
+      if (user.user_metadata?.avatar_url) payload.avatar_url = user.user_metadata.avatar_url
+
       const { error } = await client.from('profiles').upsert(payload, { onConflict: 'id' })
       if (error) {
         console.error('ensureProfile error', error)

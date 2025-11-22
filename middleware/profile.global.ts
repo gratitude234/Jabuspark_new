@@ -13,17 +13,23 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   if (!profile.value && !isLoading.value) {
     try {
-      await refreshProfile()
+      // Wait for the profile to load before deciding on onboarding so we don't redirect users who already completed it.
+      await refreshProfile(true)
     } catch {
       // ignore
     }
   }
+
+  if (isLoading.value) return
 
   const department = profile.value?.department?.trim()
   const level = profile.value?.level?.trim()
   const needsOnboarding = !department || !level
 
   if (needsOnboarding && to.path !== '/onboarding') {
-    return navigateTo('/onboarding')
+    return navigateTo({
+      path: '/onboarding',
+      query: { redirect: to.fullPath },
+    })
   }
 })
