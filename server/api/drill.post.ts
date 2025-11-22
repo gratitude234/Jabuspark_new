@@ -61,7 +61,7 @@ export default defineEventHandler(async (event) => {
   const { data: rows, error: questionsError } = await supabase
     .from('questions')
     .select('*')
-    .in('doc_id', verifiedDocIds)
+    .in('document_id', verifiedDocIds)
 
   if (questionsError) {
     throw createError({ statusCode: 500, statusMessage: questionsError.message })
@@ -69,7 +69,8 @@ export default defineEventHandler(async (event) => {
   if (!rows?.length) {
     throw createError({
       statusCode: 404,
-      statusMessage: 'No pre-generated questions found for these docs yet.',
+      statusMessage:
+        'No questions have been added yet for this document. Please try again later or choose another document.',
     })
   }
 
@@ -140,7 +141,11 @@ function mapRowToQuestion(row: any): DrillQuestion | null {
         : ''
   if (!stem || !id) return null
 
-  const rawOptions = Array.isArray(row.options) ? row.options : []
+  const rawOptions = Array.isArray(row.options)
+    ? row.options
+    : Array.isArray((row.options as any)?.options)
+      ? (row.options as any).options
+      : []
   const options = rawOptions
     .map((option) =>
       typeof option === 'string'
@@ -152,8 +157,8 @@ function mapRowToQuestion(row: any): DrillQuestion | null {
     .filter((option) => option.length > 0)
 
   const correct =
-    typeof row.correct === 'number'
-      ? row.correct
+    typeof row.correct_index === 'number'
+      ? row.correct_index
       : options.length
         ? 0
         : -1
@@ -170,15 +175,11 @@ function mapRowToQuestion(row: any): DrillQuestion | null {
     correct,
     explanation,
     docId:
-      typeof row.doc_id === 'string' && row.doc_id.length ? row.doc_id : null,
-    topic:
-      typeof row.section_topic === 'string' && row.section_topic.length
-        ? row.section_topic
+      typeof row.document_id === 'string' && row.document_id.length
+        ? row.document_id
         : null,
-    sectionId:
-      typeof row.section_id === 'string' && row.section_id.length
-        ? row.section_id
-        : null,
+    topic: null,
+    sectionId: null,
   }
 }
 

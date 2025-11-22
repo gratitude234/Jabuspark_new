@@ -67,7 +67,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: questionRows, error: questionError } = await supabase
     .from('questions')
-    .select('id, correct')
+    .select('id, correct_index')
     .in('id', questionIds)
 
   if (questionError) {
@@ -76,7 +76,8 @@ export default defineEventHandler(async (event) => {
 
   const correctMap = new Map<string, number>()
   questionRows?.forEach((row) => {
-    if (row?.id) correctMap.set(row.id, typeof row.correct === 'number' ? row.correct : 0)
+    if (row?.id)
+      correctMap.set(row.id, typeof row.correct_index === 'number' ? row.correct_index : 0)
   })
 
   const inserts = normalizedAttempts.map((attempt) => ({

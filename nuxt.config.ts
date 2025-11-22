@@ -44,6 +44,8 @@ export default defineNuxtConfig({
     geminiModelEmbedding:
       process.env.NUXT_GEMINI_MODEL_EMBEDDING || 'models/text-embedding-004',
     geminiDisabled: process.env.NUXT_GEMINI_DISABLED === 'true',
+    geminiAutoSeedQuestions:
+      process.env.NUXT_GEMINI_AUTO_SEED_QUESTIONS === 'true',
 
     // public (available on client + server)
     public: {

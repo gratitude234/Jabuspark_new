@@ -94,19 +94,19 @@ create table if not exists public.drills (
 );
 
 create table if not exists public.questions (
-  id uuid primary key,
-  drill_id uuid references public.drills(id) on delete cascade,
-  doc_id uuid references public.documents(id) on delete cascade,
-  section_topic text,
-  section_id text,
-  stem text,
-  options text[],
-  correct int,
+  id uuid primary key default gen_random_uuid(),
+  document_id uuid not null references public.documents(id) on delete cascade,
+  stem text not null,
+  options jsonb not null,
+  correct_index integer not null check (correct_index between 0 and 7),
   explanation text,
-  difficulty text,
-  topic_tags text[],
-  citations jsonb default '[]'::jsonb
+  difficulty text check (difficulty in ('easy','medium','hard')),
+  page_hint integer,
+  created_by uuid references public.profiles(id),
+  created_at timestamptz default now()
 );
+
+create index if not exists questions_document_id_idx on public.questions (document_id);
 
 create table if not exists public.drill_sessions (
   id uuid primary key default gen_random_uuid(),
@@ -190,11 +190,11 @@ alter table public.documents
   alter column approval_status set not null;
 
 alter table public.questions
-  add column if not exists doc_id uuid references public.documents(id) on delete cascade,
-  add column if not exists section_topic text,
-  add column if not exists section_id text,
-  add column if not exists difficulty text,
-  add column if not exists topic_tags text[];
+  add column if not exists document_id uuid references public.documents(id) on delete cascade,
+  add column if not exists correct_index integer,
+  add column if not exists page_hint integer,
+  add column if not exists created_by uuid references public.profiles(id),
+  add column if not exists created_at timestamptz default now();
 
 alter table public.documents
   drop constraint if exists documents_status_check;

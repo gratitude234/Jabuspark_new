@@ -52,14 +52,14 @@ export default defineEventHandler(async (event) => {
 
   const { data: questions, error: questionsError } = await supabase
     .from('questions')
-    .select('id, doc_id, stem, options, correct, explanation, section_topic')
+    .select('id, document_id, stem, options, correct_index, explanation, page_hint')
     .in('id', questionIds)
 
   if (questionsError) {
     throw createError({ statusCode: 500, statusMessage: questionsError.message })
   }
 
-  const docIds = Array.from(new Set((questions || []).map((q) => q.doc_id)))
+  const docIds = Array.from(new Set((questions || []).map((q) => q.document_id)))
   const { data: documents, error: docsError } = await supabase
     .from('documents')
     .select('id, course_id')
@@ -74,9 +74,9 @@ export default defineEventHandler(async (event) => {
 
   const filtered: DrillQuestion[] = []
   for (const q of questions || []) {
-    const docMeta = docMap.get(q.doc_id)
+    const docMeta = docMap.get(q.document_id)
     if (courseId && docMeta?.course_id !== courseId) continue
-    if (docId && q.doc_id !== docId) continue
+    if (docId && q.document_id !== docId) continue
 
     const options = Array.isArray(q.options)
       ? q.options
@@ -88,10 +88,10 @@ export default defineEventHandler(async (event) => {
       id: q.id,
       stem: q.stem || '',
       options,
-      correct: typeof q.correct === 'number' ? q.correct : 0,
+      correct: typeof q.correct_index === 'number' ? q.correct_index : 0,
       explanation: q.explanation || null,
-      docId: q.doc_id,
-      topic: q.section_topic || null,
+      docId: q.document_id,
+      topic: null,
       sectionId: null,
     })
   }

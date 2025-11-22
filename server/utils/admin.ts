@@ -27,3 +27,25 @@ export async function requireTutorOrAdminRole(
 
   return role
 }
+
+export async function requireAdminRole(supabase: SupabaseClient, userId: string) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (error) {
+    throw createError({ statusCode: 500, statusMessage: error.message })
+  }
+
+  const role = (data?.role as string) || 'student'
+  if (role !== 'admin' && role !== 'super_admin') {
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'Admin access required.',
+    })
+  }
+
+  return role
+}

@@ -129,18 +129,17 @@ export default defineEventHandler(async (event) => {
       })
       .eq('id', body.docId)
 
-    // Auto-generate drill questions for a few sections of this document.
-    // This calls /api/questions/generate which:
-    //  - uses Gemini to name a topic + build MCQs/short-answers,
-    //  - saves them into public.questions bound to this doc_id.
-    // If generation fails (including Gemini 503 "model overloaded"
-    // or MAX_TOKENS issues), we log and continue; ingest still succeeds.
-    if (!config.geminiDisabled) {
+    // Optional auto-seed for Gemini question generation. Disabled by default.
+    const shouldAutoSeed =
+      !config.geminiDisabled && (config as any).geminiAutoSeedQuestions === true
+    if (shouldAutoSeed) {
       await seedQuestionsForDocument({
         docId: body.docId,
         courseName: doc.course,
         chunks,
       })
+    } else {
+      console.info('Skipping auto question seeding (manual mode)')
     }
 
     const embeddingProvider =
