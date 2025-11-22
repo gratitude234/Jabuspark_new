@@ -1,12 +1,7 @@
-# Dependencies
-node_modules
-
-# Nuxt build output
-.nuxt
-.nitro
-.output
-dist
-
-# Env files
+node_modules/
+.nuxt/
+.nitro/
+.output/
+dist/
 .env
 .env.*
