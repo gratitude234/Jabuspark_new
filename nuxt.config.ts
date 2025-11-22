@@ -37,7 +37,7 @@ export default defineNuxtConfig({
       process.env.NUXT_SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_KEY,
     geminiApiKey: process.env.NUXT_GEMINI_API_KEY || process.env.GEMINI_API_KEY,
 
-    // 👇 default to Pro for text; can override with NUXT_GEMINI_MODEL_TEXT
+    // default to Pro for text; can override with NUXT_GEMINI_MODEL_TEXT
     // e.g. NUXT_GEMINI_MODEL_TEXT=gemini-2.5-flash
     geminiModelText: process.env.NUXT_GEMINI_MODEL_TEXT || 'gemini-2.5-pro',
 
@@ -65,6 +65,6 @@ export default defineNuxtConfig({
   },
 
   nitro: {
-    preset: 'node-server',
+    preset: 'vercel',
   },
 })
