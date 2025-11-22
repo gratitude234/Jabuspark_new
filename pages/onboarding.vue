@@ -108,7 +108,7 @@
         <Button
           type="submit"
           class="w-full"
-          :disabled="saving || isLoading"
+          :disabled="!canSubmit"
         >
           {{ saving ? 'Saving...' : 'Save profile' }}
         </Button>
@@ -203,8 +203,23 @@ const errors = reactive<Record<string, string>>({})
 const saving = ref(false)
 const submitError = ref<string | null>(null)
 
+const requiredFilled = computed(
+  () =>
+    Boolean(form.full_name?.trim()) &&
+    Boolean(form.department?.trim()) &&
+    Boolean(form.level?.trim()),
+)
+
+const canSubmit = computed(() => Boolean(user.value) && !saving.value && requiredFilled.value)
+
 const redirectPath = computed(() =>
   typeof route.query.redirect === 'string' && route.query.redirect ? route.query.redirect : '/',
+)
+
+const profileComplete = computed(
+  () =>
+    Boolean(profile.value?.department?.trim()?.length) &&
+    Boolean(profile.value?.level?.trim()?.length),
 )
 
 // preload from profile when it's available
@@ -226,6 +241,16 @@ onMounted(() => {
     refreshProfile()
   }
 })
+
+watch(
+  () => profileComplete.value,
+  (done) => {
+    if (done && !saving.value) {
+      router.push(redirectPath.value || '/')
+    }
+  },
+  { immediate: true },
+)
 
 function validate() {
   errors.full_name = form.full_name ? '' : 'Full name is required.'

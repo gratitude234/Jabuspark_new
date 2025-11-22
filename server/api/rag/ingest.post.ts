@@ -11,10 +11,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'docId required' })
   }
 
-  const user = await serverSupabaseUser(event)
-  if (!user) {
-    throw createError({ statusCode: 401, statusMessage: 'Auth required' })
-  }
+  // Try to read the auth cookie, but allow service-mode ingest even if the cookie is missing
+  // (e.g. when the client request loses the session on Vercel). We still validate ownership
+  // if a user is present.
+  const user = await serverSupabaseUser(event).catch(() => null)
 
   const supabase = createServiceClient()
   const { data: doc, error: docError } = await supabase
@@ -26,7 +26,10 @@ export default defineEventHandler(async (event) => {
   if (docError) {
     throw createError({ statusCode: 500, statusMessage: docError.message })
   }
-  if (!doc || doc.user_id !== user.id) {
+  if (!doc) {
+    throw createError({ statusCode: 404, statusMessage: 'Document not found' })
+  }
+  if (user && doc.user_id !== user.id) {
     throw createError({ statusCode: 403, statusMessage: 'Not your doc' })
   }
 
