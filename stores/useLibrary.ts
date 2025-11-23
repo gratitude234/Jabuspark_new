@@ -58,6 +58,8 @@ export const useLibrary = defineStore('library', {
       },
     ) {
       const auth = useAuth()
+      const toasts = useToasts()
+
       if (!auth.user) throw new Error('Sign in required')
 
       const client = useSupabaseClient()
@@ -121,16 +123,22 @@ export const useLibrary = defineStore('library', {
 
       if (insertError) throw insertError
 
-      // 3) refresh local documents list
-      await this.loadDocuments()
+      // 3) refresh local documents list so the new doc shows up
+      try {
+        await this.loadDocuments()
+      } catch (err) {
+        console.warn('Failed to reload documents after upload', err)
+      }
 
       // 4) kick off ingestion for Ask/Reader (embeddings, etc.)
-      //    Fire-and-forget: do NOT await, so the UI doesn't get stuck.
+      //    This NO LONGER blocks the upload or the UI.
+      //    It runs in the background; failures are logged only.
       $fetch('/api/rag/ingest', {
         method: 'POST',
         body: { docId },
       }).catch((err) => {
-        console.error('Ingest failed', err)
+        console.error('Background ingest failed', err)
+        toasts.error('Upload saved, but processing failed. You can tap "Retry" on the doc.')
       })
     },
 
