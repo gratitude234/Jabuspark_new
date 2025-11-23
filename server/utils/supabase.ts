@@ -1,12 +1,32 @@
-import { createClient } from '@supabase/supabase-js'
+// server/utils/supabase.ts
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+
+let serviceClient: SupabaseClient | null = null
 
 export function createServiceClient() {
   const config = useRuntimeConfig()
-  if (!config.public.supabaseUrl || !config.supabaseServiceKey) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Missing Supabase service credentials',
+
+  const supabaseUrl = config.public.supabaseUrl
+  const serviceKey = config.supabaseServiceKey
+
+  if (!supabaseUrl || !serviceKey) {
+    throw new Error(
+      'Missing Supabase service credentials. Check NUXT_SUPABASE_URL and NUXT_SUPABASE_SERVICE_KEY in your env.',
+    )
+  }
+
+  if (!serviceClient) {
+    serviceClient = createClient(supabaseUrl, serviceKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+      global: {
+        // Let Supabase reuse the platform fetch (works on Vercel)
+        fetch: (input, init) => fetch(input as any, init as any),
+      },
     })
   }
-  return createClient(config.public.supabaseUrl, config.supabaseServiceKey)
+
+  return serviceClient
 }
