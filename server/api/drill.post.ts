@@ -1,4 +1,6 @@
-// Drill sessions now read from pre-generated question pools so students get consistent questions per document batch.
+// Drill sessions now read from pre-generated question pools so students get
+// consistent questions per document batch.
+
 import { randomUUID } from 'node:crypto'
 import { createError } from 'h3'
 import { serverSupabaseUser } from '#supabase/server'
@@ -24,48 +26,68 @@ export default defineEventHandler(async (event) => {
   const body = await readBody<DrillRequestBody>(event)
   const difficulty = normalizeDifficulty(body?.difficulty)
   const docIds = normalizeDocIds(body?.docIds)
+
   if (!docIds.length) {
-    throw createError({ statusCode: 400, statusMessage: 'Select at least one document.' })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Select at least one document.',
+    })
   }
 
-  const requestedCount = typeof body?.count === 'number' ? body.count : DEFAULT_COUNT
+  const requestedCount =
+    typeof body?.count === 'number' ? body.count : DEFAULT_COUNT
   const targetCount = clamp(requestedCount, MIN_COUNT, MAX_COUNT)
 
   const supabase = createServiceClient()
 
+  // 1) Verify docs exist, are ready + have questions, and user can access them
   const { data: docs, error: docsError } = await supabase
     .from('documents')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('status', 'ready')
+    .select('id, user_id, visibility, approval_status, status, question_status')
     .in('id', docIds)
 
   if (docsError) {
     throw createError({ statusCode: 500, statusMessage: docsError.message })
   }
-  if (!docs?.length) {
+
+  const accessible = (docs || []).filter((doc) => {
+    if (!doc) return false
+    const isReady =
+      doc.status === 'ready' && doc.question_status === 'has_questions'
+    const isOwner = doc.user_id === user.id
+    const isApprovedCourse =
+      doc.visibility === 'course' && doc.approval_status === 'approved'
+    return isReady && (isOwner || isApprovedCourse)
+  })
+
+  if (!accessible.length) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'No ready documents matched your selection.',
+      statusMessage:
+        'No ready documents with questions matched your selection.',
     })
   }
-  if (docs.length !== docIds.length) {
+
+  if (accessible.length !== docIds.length) {
     throw createError({
       statusCode: 403,
-      statusMessage: 'Some selected documents are not accessible or ready yet.',
+      statusMessage:
+        'Some selected documents are not accessible or ready with questions yet.',
     })
   }
 
-  const verifiedDocIds = docs.map((doc) => doc.id)
+  const verifiedDocIds = accessible.map((doc) => doc.id)
 
+  // 2) Pull questions from the pool (pre-generated, per document)
   const { data: rows, error: questionsError } = await supabase
     .from('questions')
-    .select('*')
-    .in('document_id', verifiedDocIds)
+    .select('id, stem, options, correct, explanation, doc_id, difficulty')
+    .in('doc_id', verifiedDocIds)
 
   if (questionsError) {
     throw createError({ statusCode: 500, statusMessage: questionsError.message })
   }
+
   if (!rows?.length) {
     throw createError({
       statusCode: 404,
@@ -74,9 +96,10 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // 3) Optional difficulty filtering
   let questionRows = rows ?? []
   if (difficulty !== 'mixed') {
-    const filtered = questionRows.filter((row) => {
+    const filtered = questionRows.filter((row: any) => {
       const value =
         typeof row.difficulty === 'string'
           ? row.difficulty.toLowerCase()
@@ -88,15 +111,17 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // 4) Sample and map to DrillQuestion[]
   const shuffled = shuffle(questionRows.slice())
-  const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length))
+  const selected = shuffled.slice(
+    0,
+    Math.min(targetCount, shuffled.length),
+  )
 
   const mapped: DrillQuestion[] = []
   for (const row of selected) {
     const question = mapRowToQuestion(row)
-    if (question) {
-      mapped.push(question)
-    }
+    if (question) mapped.push(question)
   }
 
   if (!mapped.length) {
@@ -106,6 +131,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // 5) Log drill session for leaderboard / review mode
   const sessionId = await logDrillSession(supabase, {
     userId: user.id,
     docIds: verifiedDocIds,
@@ -132,6 +158,7 @@ function normalizeDocIds(docIds?: string[]) {
 
 function mapRowToQuestion(row: any): DrillQuestion | null {
   if (!row) return null
+
   const stem = typeof row.stem === 'string' ? row.stem.trim() : ''
   const id =
     typeof row.id === 'string'
@@ -139,26 +166,23 @@ function mapRowToQuestion(row: any): DrillQuestion | null {
       : row.id != null
         ? String(row.id)
         : ''
+
   if (!stem || !id) return null
 
-  const rawOptions = Array.isArray(row.options)
-    ? row.options
-    : Array.isArray((row.options as any)?.options)
-      ? (row.options as any).options
-      : []
+  const rawOptions = Array.isArray(row.options) ? row.options : []
   const options = rawOptions
-    .map((option) =>
+    .map((option: any) =>
       typeof option === 'string'
         ? option
         : option != null
           ? String(option)
           : '',
     )
-    .filter((option) => option.length > 0)
+    .filter((option: string) => option.length > 0)
 
   const correct =
-    typeof row.correct_index === 'number'
-      ? row.correct_index
+    typeof row.correct === 'number'
+      ? row.correct
       : options.length
         ? 0
         : -1
@@ -175,8 +199,8 @@ function mapRowToQuestion(row: any): DrillQuestion | null {
     correct,
     explanation,
     docId:
-      typeof row.document_id === 'string' && row.document_id.length
-        ? row.document_id
+      typeof row.doc_id === 'string' && row.doc_id.length
+        ? row.doc_id
         : null,
     topic: null,
     sectionId: null,
@@ -219,7 +243,9 @@ async function logDrillSession(
       return data?.id ?? payload.id
     }
     if (error.code === '42P01') {
-      console.warn('drill_sessions table missing; falling back to legacy drills table.')
+      console.warn(
+        'drill_sessions table missing; falling back to legacy drills table.',
+      )
       return await legacyLogDrillSession(supabase, params)
     }
     console.error('Failed to log drill session', error)
@@ -240,7 +266,12 @@ async function legacyLogDrillSession(
     question_count: params.questionCount,
   }
 
-  const { data, error } = await supabase.from('drills').insert(basePayload).select('id').maybeSingle()
+  const { data, error } = await supabase
+    .from('drills')
+    .insert(basePayload)
+    .select('id')
+    .maybeSingle()
+
   if (!error) {
     return data?.id ?? null
   }
@@ -252,8 +283,11 @@ async function legacyLogDrillSession(
   return null
 }
 
-function normalizeDifficulty(value?: string | null): 'easy' | 'mixed' | 'hard' {
-  const normalized = typeof value === 'string' ? value.toLowerCase().trim() : ''
+function normalizeDifficulty(
+  value?: string | null,
+): 'easy' | 'mixed' | 'hard' {
+  const normalized =
+    typeof value === 'string' ? value.toLowerCase().trim() : ''
   if (normalized === 'easy' || normalized === 'hard') return normalized
   return 'mixed'
 }

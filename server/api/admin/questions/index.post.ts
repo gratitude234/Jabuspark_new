@@ -19,7 +19,15 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody<CreateQuestionBody>(event)
-  const { documentId, stem, options, correctIndex, explanation, difficulty, pageHint } = body || {}
+  const {
+    documentId,
+    stem,
+    options,
+    correctIndex,
+    explanation,
+    difficulty,
+    pageHint,
+  } = body || {}
 
   if (!documentId || typeof documentId !== 'string') {
     throw createError({ statusCode: 400, statusMessage: 'documentId is required.' })
@@ -61,7 +69,8 @@ export default defineEventHandler(async (event) => {
       stem: cleanStem,
       options: optionList,
       correct_index: index,
-      explanation: typeof explanation === 'string' && explanation.trim() ? explanation.trim() : null,
+      explanation:
+        typeof explanation === 'string' && explanation.trim() ? explanation.trim() : null,
       difficulty: normalizedDifficulty,
       page_hint: page,
       created_by: user.id,
@@ -73,5 +82,39 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: error.message })
   }
 
+  // Recalculate question_status and question_count on the document
+  await updateDocumentQuestionMeta(supabase, documentId)
+
   return data
 })
+
+async function updateDocumentQuestionMeta(supabase: any, documentId: string) {
+  try {
+    const { count, error } = await supabase
+      .from('questions')
+      .select('*', { count: 'exact', head: true })
+      .eq('document_id', documentId)
+
+    if (error) {
+      console.warn('Failed to recalc question_count for document', documentId, error)
+      return
+    }
+
+    const total = count ?? 0
+    const status = total > 0 ? 'has_questions' : 'none'
+
+    const { error: updateError } = await supabase
+      .from('documents')
+      .update({
+        question_status: status,
+        question_count: total,
+      })
+      .eq('id', documentId)
+
+    if (updateError) {
+      console.warn('Failed to update document question meta', documentId, updateError)
+    }
+  } catch (err) {
+    console.warn('Unexpected error updating document question meta', documentId, err)
+  }
+}

@@ -1,3 +1,4 @@
+// stores/useLibrary.ts
 import { defineStore } from 'pinia'
 import { useSupabaseClient } from '#imports'
 import type { DocumentRow } from '~/types/models'
@@ -19,23 +20,30 @@ export const useLibrary = defineStore('library', {
     error: null as string | null,
     lastSession: null as SessionState | null,
   }),
+
   actions: {
     async loadDocuments() {
       const auth = useAuth()
       if (!auth.user) return
+
       this.loading = true
       const client = useSupabaseClient()
+
       const { data, error } = await client
         .from('documents')
         .select('*, courses:course_id(id, code, title, level)')
         .order('updated_at', { ascending: false })
+
       this.loading = false
+
       if (error) {
         this.error = error.message
         return
       }
+
       this.documents = (data as DocumentRow[]) || []
     },
+
     async uploadDocument(
       file: File,
       options?: {
@@ -51,10 +59,13 @@ export const useLibrary = defineStore('library', {
     ) {
       const auth = useAuth()
       if (!auth.user) throw new Error('Sign in required')
+
       const client = useSupabaseClient()
       const docId = crypto.randomUUID()
+
       const ext = (file.name.split('.').pop() || 'pdf').toLowerCase()
       const path = `user/${auth.user.id}/${docId}.${ext}`
+
       const visibility = options?.visibility ?? 'personal'
       const course = options?.course ?? null
       const docType = options?.docType ?? null
@@ -63,12 +74,22 @@ export const useLibrary = defineStore('library', {
       const faculty = options?.faculty ?? null
       const department = options?.department ?? null
       const isPublic = options?.isPublic ?? false
+
+      // Course docs must be reviewed; personal docs are "approved" by default
       const approvalStatus = visibility === 'course' ? 'pending' : 'approved'
-      const { error: storageError } = await client.storage.from('docs').upload(path, file, {
-        upsert: true,
-        contentType: 'application/pdf',
-      })
+
+      // 1) upload PDF to storage
+      const { error: storageError } = await client.storage
+        .from('docs')
+        .upload(path, file, {
+          upsert: true,
+          contentType: 'application/pdf',
+        })
+
       if (storageError) throw storageError
+
+      // 2) insert document row
+      //    IMPORTANT: mark question_status = 'pending_admin' and question_count = 0
       const { error: insertError } = await client
         .from('documents')
         .insert({
@@ -88,35 +109,54 @@ export const useLibrary = defineStore('library', {
           faculty,
           department,
           is_public: isPublic,
-          status: 'uploading',
+          status: 'uploading',          // ingest pipeline will update this later
           error_message: null,
           size_bytes: file.size,
+          // NEW fields for admin-authored questions:
+          question_status: 'pending_admin', // waiting for admin to create MCQs
+          question_count: 0,                // no questions yet
         })
         .select()
         .single()
+
       if (insertError) throw insertError
+
+      // 3) refresh local documents list
       await this.loadDocuments()
+
+      // 4) kick off ingestion for Ask/Reader (embeddings, etc.)
+      //    This NO LONGER generates MCQs – admin will handle that separately.
       await $fetch('/api/rag/ingest', { method: 'POST', body: { docId } })
     },
+
     async retryIngest(doc: DocumentRow) {
       const auth = useAuth()
       const toasts = useToasts()
       if (!auth.user) throw new Error('Sign in required')
-      await $fetch('/api/rag/ingest', { method: 'POST', body: { docId: doc.id } })
+
+      await $fetch('/api/rag/ingest', {
+        method: 'POST',
+        body: { docId: doc.id },
+      })
+
       this.updateDoc(doc.id, { status: 'processing', error_message: null })
       toasts.info('Re-running ingest for this document.')
     },
+
     updateDoc(id: string, patch: Partial<DocumentRow>) {
       const idx = this.documents.findIndex((doc) => doc.id === id)
       if (idx === -1) return
       this.documents[idx] = { ...this.documents[idx], ...patch }
     },
+
     setLastSession(session: SessionState) {
       this.lastSession = session
     },
+
     async fetchLastSession() {
       const auth = useAuth()
       if (!auth.user) return
+
       const client = useSupabaseClient()
       const { data, error } = await client
         .from('sessions')
@@ -125,10 +165,12 @@ export const useLibrary = defineStore('library', {
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle()
+
       if (error) {
         console.warn(error.message)
         return
       }
+
       if (data) {
         this.lastSession = {
           id: data.id,
@@ -139,15 +181,19 @@ export const useLibrary = defineStore('library', {
         }
       }
     },
+
     async saveSession(partial: SessionState) {
       const auth = useAuth()
       if (!auth.user) return
+
       const client = useSupabaseClient()
+
       const state = {
         ...(partial.metadata || {}),
         docId: partial.docId || partial.metadata?.docId,
         page: partial.page ?? partial.metadata?.page,
       }
+
       const payload = {
         id: partial.id || crypto.randomUUID(),
         user_id: auth.user.id,
@@ -156,7 +202,11 @@ export const useLibrary = defineStore('library', {
         metadata: state,
         updated_at: new Date().toISOString(),
       }
-      const { error } = await client.from('sessions').upsert(payload, { onConflict: 'id' })
+
+      const { error } = await client
+        .from('sessions')
+        .upsert(payload, { onConflict: 'id' })
+
       if (!error) {
         this.lastSession = { ...partial, id: payload.id, metadata: state }
       }

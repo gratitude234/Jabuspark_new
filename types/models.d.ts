@@ -1,4 +1,15 @@
-export type DocumentStatus = 'uploading' | 'processing' | 'ready' | 'failed' | (string & {})
+export type DocumentStatus =
+  | 'uploading'
+  | 'processing'
+  | 'ready'
+  | 'failed'
+  | (string & {})
+
+export type QuestionStatus =
+  | 'none'
+  | 'pending_admin'
+  | 'has_questions'
+  | (string & {})
 
 export interface DocumentRow {
   id: string
@@ -11,18 +22,29 @@ export interface DocumentRow {
   pages_count: number | null
   chunks_count: number | null
   visibility?: 'personal' | 'course' | (string & {}) | null
-  approval_status?: 'pending' | 'approved' | 'archived' | 'rejected' | (string & {}) | null
+  approval_status?:
+    | 'pending'
+    | 'approved'
+    | 'archived'
+    | 'rejected'
+    | (string & {})
+    | null
   doc_type?: string | null
   level?: string | null
   faculty?: string | null
   department?: string | null
   is_public?: boolean | null
+
   status: DocumentStatus
   error_message: string | null
   size_bytes: number | null
   last_opened?: string | null
   created_at: string
   updated_at: string
+
+  // NEW fields matching your documents table
+  question_status: QuestionStatus      // 'none' | 'pending_admin' | 'has_questions'
+  question_count: number               // total MCQs linked to this doc
 }
 
 export interface DrillQuestion {

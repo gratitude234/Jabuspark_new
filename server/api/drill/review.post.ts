@@ -23,6 +23,7 @@ export default defineEventHandler(async (event) => {
 
   const supabase = createServiceClient()
 
+  // 1) All sessions for this user
   const { data: sessions, error: sessionsError } = await supabase
     .from('drill_sessions')
     .select('id, doc_id')
@@ -37,6 +38,7 @@ export default defineEventHandler(async (event) => {
     return { questions: [] }
   }
 
+  // 2) Attempts where they got the answer wrong
   const { data: attempts, error: attemptsError } = await supabase
     .from('question_attempts')
     .select('question_id, is_correct, session_id')
@@ -47,19 +49,27 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: attemptsError.message })
   }
 
-  const questionIds = Array.from(new Set((attempts || []).map((a) => a.question_id)))
+  const questionIds = Array.from(
+    new Set((attempts || []).map((a) => a.question_id)),
+  )
   if (!questionIds.length) return { questions: [] }
 
+  // 3) Fetch question details
   const { data: questions, error: questionsError } = await supabase
     .from('questions')
-    .select('id, document_id, stem, options, correct_index, explanation, page_hint')
+    .select(
+      'id, doc_id, stem, options, correct, explanation',
+    )
     .in('id', questionIds)
 
   if (questionsError) {
     throw createError({ statusCode: 500, statusMessage: questionsError.message })
   }
 
-  const docIds = Array.from(new Set((questions || []).map((q) => q.document_id)))
+  // 4) Fetch doc metadata so we can filter by course
+  const docIds = Array.from(
+    new Set((questions || []).map((q) => q.doc_id)),
+  )
   const { data: documents, error: docsError } = await supabase
     .from('documents')
     .select('id, course_id')
@@ -74,23 +84,29 @@ export default defineEventHandler(async (event) => {
 
   const filtered: DrillQuestion[] = []
   for (const q of questions || []) {
-    const docMeta = docMap.get(q.document_id)
+    const docMeta = docMap.get(q.doc_id)
     if (courseId && docMeta?.course_id !== courseId) continue
-    if (docId && q.document_id !== docId) continue
+    if (docId && q.doc_id !== docId) continue
 
-    const options = Array.isArray(q.options)
-      ? q.options
-          .map((opt: any) => (typeof opt === 'string' ? opt : opt != null ? String(opt) : ''))
-          .filter((opt: string) => opt.length)
-      : []
+    const rawOptions = Array.isArray(q.options) ? q.options : []
+    const options = rawOptions
+      .map((opt: any) =>
+        typeof opt === 'string'
+          ? opt
+          : opt != null
+            ? String(opt)
+            : '',
+      )
+      .filter((opt: string) => opt.length)
 
     filtered.push({
       id: q.id,
       stem: q.stem || '',
       options,
-      correct: typeof q.correct_index === 'number' ? q.correct_index : 0,
+      correct:
+        typeof q.correct === 'number' ? q.correct : 0,
       explanation: q.explanation || null,
-      docId: q.document_id,
+      docId: q.doc_id,
       topic: null,
       sectionId: null,
     })

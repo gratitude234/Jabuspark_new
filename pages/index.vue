@@ -59,8 +59,8 @@
           {{ heroTitle }}
         </h1>
         <p class="text-xs text-slate-200 sm:text-sm">
-          Upload handouts, generate MCQs, and chat with your notes &mdash; all
-          tuned for JABU exams.
+          Upload handouts, get MCQs created, and chat with your notes &mdash;
+          all tuned for JABU exams.
         </p>
       </div>
 
@@ -141,7 +141,7 @@
             {{ readyDocsCount }}
           </p>
           <p class="text-[11px] text-slate-500">
-            Docs ready for Ask + Quick Drill.
+            Docs ready for Ask + Quick Drill (with MCQs added).
           </p>
         </Card>
 
@@ -164,7 +164,8 @@
         v-if="showReadyDocsHint"
         class="text-[11px] text-warning/90"
       >
-        Upload your first PDF to unlock Ask + Quick Drill.
+        Upload your first PDF and wait for MCQs to be added to unlock Ask +
+        Quick Drill.
       </p>
     </section>
 
@@ -343,7 +344,7 @@
               Quick Drill
             </p>
             <p class="text-[11px] text-slate-400">
-              MCQs from your docs · instant marking.
+              MCQs from your docs · instant marking (after MCQs are added).
             </p>
           </div>
           <p class="mt-2 text-[11px] text-accent/90">
@@ -382,6 +383,7 @@
             type="button"
             class="rounded-full px-3 py-1 font-semibold uppercase tracking-[0.16em] transition"
             :class="
+
               docTab === 'course'
                 ? 'bg-primary text-white shadow-sm shadow-primary/40'
                 : 'text-slate-400'
@@ -394,6 +396,7 @@
             type="button"
             class="rounded-full px-3 py-1 font-semibold uppercase tracking-[0.16em] transition"
             :class="
+
               docTab === 'personal'
                 ? 'bg-primary text-white shadow-sm shadow-primary/40'
                 : 'text-slate-400'
@@ -445,7 +448,7 @@
                   <span class="text-success">
                     {{ group.readyCount }} ready
                   </span>
-                  for AI
+                  for AI (Ask + Reader)
                 </p>
               </div>
             </div>
@@ -496,8 +499,8 @@
               department, they’ll appear here as shared course packs.
             </p>
             <p class="text-[11px] text-slate-500">
-              For now, you can still upload your own PDFs and use Ask + Quick
-              Drill.
+              For now, you can still upload your own PDFs and use Ask +
+              (once MCQs are added) Quick Drill.
             </p>
           </Card>
         </div>
@@ -556,7 +559,7 @@
           <p class="mt-4 text-sm text-slate-500">
             {{
               canUpload
-                ? 'Upload your first PDF to start drilling and asking questions.'
+                ? 'Upload your first PDF to start asking questions. Quick Drill will unlock once MCQs are added.'
                 : 'Sign in to upload your PDFs and turn them into drills.'
             }}
           </p>
@@ -605,8 +608,9 @@
           </li>
           <li>
             <span class="font-semibold text-accent">2.</span>
-            Wait until its status shows as
-            <span class="font-semibold text-success">Ready</span>.
+            Wait until its status shows
+            <span class="font-semibold text-success">Ready</span> and MCQs have
+            been added.
           </li>
           <li>
             <span class="font-semibold text-accent">3.</span>
@@ -643,6 +647,8 @@ const auth = useAuth()
 const library = useLibrary()
 const router = useRouter()
 const toasts = useToasts()
+// IMPORTANT: make useReadyDocs return docs that are status 'ready'
+// AND have admin-created questions (question_status === 'has_questions')
 const readyDocs = useReadyDocs(library)
 const supabase = useSupabaseClient()
 const { profile, isLoading: profileLoading, refreshProfile: refreshProfileStore } = useProfile()

@@ -21,16 +21,23 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody<AttemptsBody>(event)
   if (!body?.sessionId || typeof body.sessionId !== 'string') {
-    throw createError({ statusCode: 400, statusMessage: 'sessionId is required.' })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'sessionId is required.',
+    })
   }
 
   const attempts = Array.isArray(body.attempts) ? body.attempts : []
   if (!attempts.length) {
-    throw createError({ statusCode: 400, statusMessage: 'attempts array is required.' })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'attempts array is required.',
+    })
   }
 
   const supabase = createServiceClient()
 
+  // Verify session ownership
   const { data: session, error: sessionError } = await supabase
     .from('drill_sessions')
     .select('id, user_id')
@@ -41,15 +48,22 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: sessionError.message })
   }
   if (!session) {
-    throw createError({ statusCode: 404, statusMessage: 'Drill session not found.' })
+    throw createError({
+      statusCode: 404,
+      statusMessage: 'Drill session not found.',
+    })
   }
   if (session.user_id !== user.id) {
-    throw createError({ statusCode: 403, statusMessage: 'You do not own this session.' })
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'You do not own this session.',
+    })
   }
 
   const normalizedAttempts = attempts
     .map((attempt) => ({
-      questionId: typeof attempt?.questionId === 'string' ? attempt.questionId : '',
+      questionId:
+        typeof attempt?.questionId === 'string' ? attempt.questionId : '',
       choiceIndex:
         typeof attempt?.choiceIndex === 'number'
           ? attempt.choiceIndex
@@ -60,14 +74,19 @@ export default defineEventHandler(async (event) => {
     .filter((attempt) => attempt.questionId && attempt.choiceIndex >= 0)
 
   if (!normalizedAttempts.length) {
-    throw createError({ statusCode: 400, statusMessage: 'No valid attempts found.' })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'No valid attempts found.',
+    })
   }
 
-  const questionIds = Array.from(new Set(normalizedAttempts.map((item) => item.questionId)))
+  const questionIds = Array.from(
+    new Set(normalizedAttempts.map((item) => item.questionId)),
+  )
 
   const { data: questionRows, error: questionError } = await supabase
     .from('questions')
-    .select('id, correct_index')
+    .select('id, correct')
     .in('id', questionIds)
 
   if (questionError) {
@@ -76,8 +95,10 @@ export default defineEventHandler(async (event) => {
 
   const correctMap = new Map<string, number>()
   questionRows?.forEach((row) => {
-    if (row?.id)
-      correctMap.set(row.id, typeof row.correct_index === 'number' ? row.correct_index : 0)
+    if (!row?.id) return
+    const correctIndex =
+      typeof row.correct === 'number' ? row.correct : 0
+    correctMap.set(row.id, correctIndex)
   })
 
   const inserts = normalizedAttempts.map((attempt) => ({
@@ -87,10 +108,15 @@ export default defineEventHandler(async (event) => {
     is_correct: attempt.choiceIndex === correctMap.get(attempt.questionId),
   }))
 
-  const { error: insertError } = await supabase.from('question_attempts').insert(inserts)
+  const { error: insertError } = await supabase
+    .from('question_attempts')
+    .insert(inserts)
+
   if (insertError) {
     if (insertError.code === '42P01') {
-      console.warn('question_attempts table missing; skipping logging attempts.')
+      console.warn(
+        'question_attempts table missing; skipping logging attempts.',
+      )
       return { logged: 0 }
     }
     throw createError({ statusCode: 500, statusMessage: insertError.message })
@@ -102,11 +128,16 @@ export default defineEventHandler(async (event) => {
     .eq('session_id', body.sessionId)
 
   if (fetchAttemptsError) {
-    throw createError({ statusCode: 500, statusMessage: fetchAttemptsError.message })
+    throw createError({
+      statusCode: 500,
+      statusMessage: fetchAttemptsError.message,
+    })
   }
 
   const totalQuestions = allAttempts?.length || inserts.length
-  const correctAnswers = (allAttempts || inserts).filter((row) => row.is_correct).length
+  const correctAnswers = (allAttempts || inserts).filter(
+    (row) => row.is_correct,
+  ).length
 
   const updatePayload: Record<string, any> = {
     total_questions: totalQuestions,

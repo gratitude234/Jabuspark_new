@@ -11,11 +11,11 @@
         Quick Drill
       </p>
       <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">
-        Generate exam-style MCQs
+        Practice exam-style MCQs
       </h1>
       <p class="text-sm text-slate-300">
-        Select ready docs, choose how many questions you want, and practice with
-        instant feedback and a countdown.
+        Select docs that already have MCQs, choose how many questions you want,
+        and practice with instant feedback and a countdown.
       </p>
     </header>
 
@@ -82,9 +82,10 @@
           </label>
 
           <p v-if="!readyDocs.length" class="text-xs text-slate-500">
-            Upload and ingest at least one PDF to start drilling. Once a doc is
-            <span class="font-semibold text-success">Ready</span>, it will
-            appear here.
+            Upload and ingest at least one PDF and wait for your tutor/admin to
+            add MCQs. Once a doc is
+            <span class="font-semibold text-success">Ready</span> with
+            questions, it will appear here.
           </p>
         </div>
 
@@ -161,11 +162,16 @@
         </p>
       </div>
 
+      <!-- Mode -->
       <div class="space-y-2">
-        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+        <p
+          class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400"
+        >
           Mode
         </p>
-        <div class="inline-flex rounded-full border border-borderSubtle bg-background p-1 text-[11px] font-semibold uppercase tracking-[0.14em]">
+        <div
+          class="inline-flex rounded-full border border-borderSubtle bg-background p-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
+        >
           <button
             type="button"
             class="rounded-full px-3 py-1 transition"
@@ -192,22 +198,25 @@
           </button>
         </div>
         <p class="text-[11px] text-slate-500">
-          Review mode pulls questions you missed before. Keep a doc selected to focus.
+          Review mode pulls questions you missed before. Keep a doc selected to
+          focus.
         </p>
       </div>
 
-    <Button
-      class="w-full bg-accent text-background hover:bg-accent/90 disabled:opacity-60"
-      :disabled="loading || !readyDocs.length"
-      @click="startDrill"
-    >
-      {{ loading ? 'Generating…' : 'Start drill' }}
-    </Button>
-    <p v-if="loadError" class="mt-2 text-xs text-amber-200">
-      {{ loadError }}
-    </p>
+      <!-- Start button -->
+      <Button
+        class="w-full bg-accent text-background hover:bg-accent/90 disabled:opacity-60"
+        :disabled="loading || !readyDocs.length"
+        @click="startDrill"
+      >
+        {{ loading ? 'Loading questions…' : 'Start drill' }}
+      </Button>
+      <p v-if="loadError" class="mt-2 text-xs text-amber-200">
+        {{ loadError }}
+      </p>
     </Card>
 
+    <!-- Leaderboard -->
     <Card
       class="space-y-2 border border-borderSubtle bg-surface/95 shadow-sm shadow-background/40"
     >
@@ -227,11 +236,17 @@
           <div class="flex items-center gap-2">
             <span class="text-[11px] text-slate-500">#{{ idx + 1 }}</span>
             <div>
-              <p class="text-sm font-semibold">{{ entry.name || 'Anonymous' }}</p>
-              <p class="text-[11px] text-slate-500">{{ entry.total }} questions</p>
+              <p class="text-sm font-semibold">
+                {{ entry.name || 'Anonymous' }}
+              </p>
+              <p class="text-[11px] text-slate-500">
+                {{ entry.total }} questions
+              </p>
             </div>
           </div>
-          <p class="text-sm font-semibold text-success">{{ entry.accuracy }}%</p>
+          <p class="text-sm font-semibold text-success">
+            {{ entry.accuracy }}%
+          </p>
         </div>
       </div>
     </Card>
@@ -259,8 +274,9 @@
               class="rounded-full bg-background px-2.5 py-1 font-mono text-[11px]"
               :class="{
                 'text-success': timeRemaining > 60,
-                'text-warning': timeRemaining <= 60 && timeRemaining > 15,
-                'text-danger': timeRemaining <= 15
+                'text-warning':
+                  timeRemaining <= 60 && timeRemaining > 15,
+                'text-danger': timeRemaining <= 15,
               }"
             >
               {{ formattedTime }}
@@ -337,12 +353,10 @@
     </section>
 
     <!-- Empty state -->
-    <p
-      v-else
-      class="text-sm text-slate-400"
-    >
-      No drill yet. Pick one or more ready docs, set your question count, then
-      tap <span class="font-semibold text-primary">“Start drill”</span>.
+    <p v-else class="text-sm text-slate-400">
+      No drill yet. Pick one or more ready docs (with MCQs), set your question
+      count, then tap
+      <span class="font-semibold text-primary">“Start drill”</span>.
     </p>
   </main>
 </template>
@@ -361,7 +375,10 @@ const route = useRoute()
 
 const readyDocs = useReadyDocs(library)
 const difficulty = ref<'easy' | 'mixed' | 'hard'>('mixed')
-const difficultyOptions: Array<{ label: string; value: 'easy' | 'mixed' | 'hard' }> = [
+const difficultyOptions: Array<{
+  label: string
+  value: 'easy' | 'mixed' | 'hard'
+}> = [
   { label: 'Easy', value: 'easy' },
   { label: 'Mixed', value: 'mixed' },
   { label: 'Hard', value: 'hard' },
@@ -381,7 +398,13 @@ const accuracy = ref(0)
 const missedQuestions = ref<string[]>([])
 const currentDrillId = ref<string | null>(null)
 const leaderboard = ref<
-  { userId: string; name: string | null; total: number; correct: number; accuracy: number }[]
+  {
+    userId: string
+    name: string | null
+    total: number
+    correct: number
+    accuracy: number
+  }[]
 >([])
 
 // Timer
@@ -392,8 +415,8 @@ const timerId = ref<ReturnType<typeof setInterval> | null>(null)
 const presetApplied = ref(false)
 const coursePresetLabel = ref<string | null>(null)
 
-const answeredCount = computed(() =>
-  Object.values(responses).filter((value) => value !== null).length,
+const answeredCount = computed(
+  () => Object.values(responses).filter((value) => value !== null).length,
 )
 
 const canSubmit = computed(
@@ -401,10 +424,13 @@ const canSubmit = computed(
     questions.value.length > 0 &&
     Object.values(responses).every((value) => value !== null),
 )
+
 const redoAvailable = computed(
   () =>
     submitted.value &&
-    questions.value.some((question) => responses[question.id] !== question.correct),
+    questions.value.some(
+      (question) => responses[question.id] !== question.correct,
+    ),
 )
 
 const progressPercent = computed(() => {
@@ -413,7 +439,10 @@ const progressPercent = computed(() => {
 })
 
 const timerVisible = computed(
-  () => questions.value.length > 0 && !submitted.value && timeRemaining.value > 0,
+  () =>
+    questions.value.length > 0 &&
+    !submitted.value &&
+    timeRemaining.value > 0,
 )
 
 const formattedTime = computed(() => {
@@ -511,9 +540,16 @@ function clearTimer() {
 
 async function fetchLeaderboard() {
   try {
-    const doc = readyDocs.value.find((d) => selectedDocs.value.includes(d.id))
-    const query = doc?.course_id ? { courseId: doc.course_id } : undefined
-    const data = await $fetch<typeof leaderboard.value>('/api/leaderboard', { query })
+    const doc = readyDocs.value.find((d) =>
+      selectedDocs.value.includes(d.id),
+    )
+    // course_id might not be typed on DocumentRow, so we access via any
+    const courseId = (doc as any)?.course_id || null
+    const query = courseId ? { courseId } : undefined
+
+    const data = await $fetch<typeof leaderboard.value>('/api/leaderboard', {
+      query,
+    })
     leaderboard.value = data || []
   } catch (err) {
     console.warn('Failed to load leaderboard', err)
@@ -524,7 +560,8 @@ async function startDrill() {
   loadError.value = null
 
   if (!readyDocs.value.length) {
-    const message = 'Upload and ingest a PDF first.'
+    const message =
+      'Upload and ingest a PDF first, then wait for MCQs to be added.'
     loadError.value = message
     toasts.error(message)
     return
@@ -559,7 +596,8 @@ async function startDrill() {
         ? selectedDocs.value
         : readyDocs.value.map((doc) => doc.id)
 
-    const endpoint = mode.value === 'review' ? '/api/drill/review' : '/api/drill'
+    const endpoint =
+      mode.value === 'review' ? '/api/drill/review' : '/api/drill'
     const body: any =
       mode.value === 'review'
         ? { docId: docIds[0] || null, limit: count.value }
@@ -588,12 +626,20 @@ async function startDrill() {
       },
     })
 
-    if (questions.value.length) {
-      loadError.value = null
-      startTimer()
+    if (!questions.value.length) {
+      // Explicit message when admin hasn’t added MCQs yet
+      const message =
+        'No questions available yet for these docs. Your tutor/admin may still be adding MCQs.'
+      loadError.value = message
+      toasts.error(message)
+      return
     }
+
+    loadError.value = null
+    startTimer()
   } catch (error: any) {
-    const message = error?.statusMessage || error?.message || 'Drill failed'
+    const message =
+      error?.statusMessage || error?.message || 'Drill failed to load'
     loadError.value = message
     toasts.error(message)
   } finally {
@@ -625,7 +671,9 @@ async function submitDrill(auto = false) {
   })
 
   score.value = correct
-  accuracy.value = Number(((correct / questions.value.length) * 100).toFixed(0))
+  accuracy.value = Number(
+    ((correct / questions.value.length) * 100).toFixed(0),
+  )
   missedQuestions.value = misses.slice(0, 3)
 
   if (currentDrillId.value) {
@@ -649,7 +697,7 @@ async function submitDrill(auto = false) {
   }
 
   if (auto) {
-    toasts.error('Time is up - answers revealed.')
+    toasts.error('Time is up — answers revealed.')
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
