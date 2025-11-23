@@ -80,66 +80,79 @@ export const useLibrary = defineStore('library', {
       // Course docs must be reviewed; personal docs are "approved" by default
       const approvalStatus = visibility === 'course' ? 'pending' : 'approved'
 
-      // 1) upload PDF to storage
-      const { error: storageError } = await client.storage
-        .from('docs')
-        .upload(path, file, {
-          upsert: true,
-          contentType: 'application/pdf',
-        })
-
-      if (storageError) throw storageError
-
-      // 2) insert document row
-      //    IMPORTANT: mark question_status = 'pending_admin' and question_count = 0
-      const { error: insertError } = await client
-        .from('documents')
-        .insert({
-          id: docId,
-          user_id: auth.user.id,
-          title: file.name.replace(/\.pdf$/i, ''),
-          course,
-          course_code: courseCode,
-          kind: null,
-          doc_type: docType,
-          storage_path: path,
-          pages_count: null,
-          chunks_count: null,
-          visibility,
-          approval_status: approvalStatus,
-          level,
-          faculty,
-          department,
-          is_public: isPublic,
-          status: 'uploading', // ingest pipeline will update this later
-          error_message: null,
-          size_bytes: file.size,
-          // NEW fields for admin-authored questions:
-          question_status: 'pending_admin', // waiting for admin to create MCQs
-          question_count: 0, // no questions yet
-        })
-        .select()
-        .single()
-
-      if (insertError) throw insertError
-
-      // 3) refresh local documents list so the new doc shows up
       try {
-        await this.loadDocuments()
-      } catch (err) {
-        console.warn('Failed to reload documents after upload', err)
-      }
+        // 1) upload PDF to storage
+        const { error: storageError } = await client.storage
+          .from('docs')
+          .upload(path, file, {
+            upsert: true,
+            contentType: 'application/pdf',
+          })
 
-      // 4) kick off ingestion for Ask/Reader (embeddings, etc.)
-      //    This NO LONGER blocks the upload or the UI.
-      //    It runs in the background; failures are logged only.
-      $fetch('/api/rag/ingest', {
-        method: 'POST',
-        body: { docId },
-      }).catch((err) => {
-        console.error('Background ingest failed', err)
-        toasts.error('Upload saved, but processing failed. You can tap "Retry" on the doc.')
-      })
+        if (storageError) throw storageError
+
+        // 2) insert document row
+        const { error: insertError } = await client
+          .from('documents')
+          .insert({
+            id: docId,
+            user_id: auth.user.id,
+            title: file.name.replace(/\.pdf$/i, ''),
+            course,
+            course_code: courseCode,
+            kind: null,
+            doc_type: docType,
+            storage_path: path,
+            pages_count: null,
+            chunks_count: null,
+            visibility,
+            approval_status: approvalStatus,
+            level,
+            faculty,
+            department,
+            is_public: isPublic,
+            status: 'uploading',
+            error_message: null,
+            size_bytes: file.size,
+            // waiting for admin to add MCQs
+            question_status: 'pending_admin',
+            question_count: 0,
+          })
+          .select()
+          .single()
+
+        if (insertError) throw insertError
+
+        // 3) refresh local documents list
+        await this.loadDocuments()
+
+        // 4) kick off ingest for Ask/Reader (embeddings only, no MCQ gen)
+        await $fetch('/api/rag/ingest', {
+          method: 'POST',
+          body: { docId },
+        })
+      } catch (err: any) {
+        const message =
+          err?.statusMessage || err?.message || 'Upload or processing failed'
+
+        // try to mark the doc as failed in DB as well
+        try {
+          await client
+            .from('documents')
+            .update({
+              status: 'failed',
+              error_message: message.slice(0, 280),
+            })
+            .eq('id', docId)
+        } catch {
+          // ignore secondary failure
+        }
+
+        // refresh and show toast
+        await this.loadDocuments()
+        toasts.error(message)
+        throw err
+      }
     },
 
     async retryIngest(doc: DocumentRow) {
@@ -147,13 +160,23 @@ export const useLibrary = defineStore('library', {
       const toasts = useToasts()
       if (!auth.user) throw new Error('Sign in required')
 
-      await $fetch('/api/rag/ingest', {
-        method: 'POST',
-        body: { docId: doc.id },
-      })
+      try {
+        await $fetch('/api/rag/ingest', {
+          method: 'POST',
+          body: { docId: doc.id },
+        })
 
-      this.updateDoc(doc.id, { status: 'processing', error_message: null })
-      toasts.info('Re-running ingest for this document.')
+        this.updateDoc(doc.id, { status: 'processing', error_message: null })
+        toasts.info('Re-running ingest for this document.')
+      } catch (err: any) {
+        const message =
+          err?.statusMessage || err?.message || 'Retry failed for this doc.'
+        this.updateDoc(doc.id, {
+          status: 'failed',
+          error_message: message.slice(0, 280),
+        })
+        toasts.error(message)
+      }
     },
 
     updateDoc(id: string, patch: Partial<DocumentRow>) {
