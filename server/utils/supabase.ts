@@ -1,32 +1,48 @@
 // server/utils/supabase.ts
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
-let serviceClient: SupabaseClient | null = null
+/**
+ * If you have generated Database types from Supabase, you can import them and
+ * replace `any` here:
+ *
+ *   import type { Database } from '~/types/database'
+ *   type ServiceClient = SupabaseClient<Database>
+ *
+ * For now we keep it generic so it compiles either way.
+ */
+type ServiceClient = SupabaseClient<any>
 
-export function createServiceClient() {
+let cachedServiceClient: ServiceClient | null = null
+
+export function createServiceClient(): ServiceClient {
+  if (cachedServiceClient) return cachedServiceClient
+
   const config = useRuntimeConfig()
 
-  const supabaseUrl = config.public.supabaseUrl
-  const serviceKey = config.supabaseServiceKey
+  // Prefer Nuxt runtime config (what you already set in nuxt.config.ts)
+  const supabaseUrl =
+    (config.public as any)?.supabaseUrl ||
+    process.env.NUXT_SUPABASE_URL ||
+    process.env.SUPABASE_URL
+
+  const serviceKey =
+    (config as any).supabaseServiceKey ||
+    process.env.NUXT_SUPABASE_SERVICE_KEY ||
+    process.env.SUPABASE_SERVICE_KEY
 
   if (!supabaseUrl || !serviceKey) {
     throw new Error(
-      'Missing Supabase service credentials. Check NUXT_SUPABASE_URL and NUXT_SUPABASE_SERVICE_KEY in your env.',
+      'Supabase service client misconfigured – check supabase URL and service key in runtimeConfig / env vars.',
     )
   }
 
-  if (!serviceClient) {
-    serviceClient = createClient(supabaseUrl, serviceKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        // Let Supabase reuse the platform fetch (works on Vercel)
-        fetch: (input, init) => fetch(input as any, init as any),
-      },
-    })
-  }
+  cachedServiceClient = createClient(supabaseUrl, serviceKey, {
+    auth: {
+      // We’re on the server, no need to persist sessions
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
 
-  return serviceClient
+  return cachedServiceClient
 }
