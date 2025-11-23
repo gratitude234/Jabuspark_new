@@ -1,3 +1,5 @@
+// server/api/rag/ingest.post.ts
+
 import { createError } from 'h3'
 import { serverSupabaseUser } from '#supabase/server'
 import { extractPdfPages } from '~/server/utils/pdf'
@@ -6,9 +8,7 @@ import { chunkPages } from '~/server/utils/retrieval'
 import { createServiceClient } from '~/server/utils/supabase'
 
 export default defineEventHandler(async (event) => {
-  const config = useRuntimeConfig()
   const body = await readBody<{ docId: string; storagePath?: string; sourceUrl?: string }>(event)
-
   if (!body?.docId) {
     throw createError({ statusCode: 400, statusMessage: 'docId required' })
   }
@@ -50,6 +50,7 @@ export default defineEventHandler(async (event) => {
 
   try {
     let buffer: Buffer
+
     if (sourceUrl) {
       const response = await fetch(sourceUrl)
       if (!response.ok) {
@@ -75,6 +76,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // --- PDF → chunks → embeddings ---
     const pages = await extractPdfPages(buffer)
     const chunks = chunkPages(pages)
 
@@ -99,7 +101,9 @@ export default defineEventHandler(async (event) => {
           page: chunk.page,
           content: chunk.content,
           embedding:
-            Array.isArray(vector) && vector.length ? vector : new Array(fallbackLength).fill(0),
+            Array.isArray(vector) && vector.length
+              ? vector
+              : new Array(fallbackLength).fill(0),
         })
       })
 
@@ -116,6 +120,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    // Mark document ready – NO automatic question generation
     await supabase
       .from('documents')
       .update({
@@ -124,21 +129,14 @@ export default defineEventHandler(async (event) => {
         chunks_count: rows.length,
         error_message: null,
         updated_at: new Date().toISOString(),
-        // NEW: questions are handled manually by admin
-        question_status: 'pending_admin',
-        question_count: 0,
       })
       .eq('id', body.docId)
-
-    const embeddingProvider =
-      ((config.public as any)?.embeddingProvider as string | undefined) || 'gemini'
 
     return {
       success: true,
       docId: body.docId,
       chunkCount: rows.length,
       pageCount: pages.length,
-      embeddedWith: embeddingProvider,
     }
   } catch (err: any) {
     await supabase
