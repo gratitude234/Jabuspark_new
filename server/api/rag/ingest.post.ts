@@ -1,12 +1,19 @@
 // server/api/rag/ingest.post.ts
-import { serverSupabaseUser, serverSupabaseClient } from '#supabase/server'
+import { createError } from 'h3'
+import { serverSupabaseUser } from '#supabase/server'
+
 import { extractPdfPages } from '~/server/utils/pdf'
 import { embedTexts } from '~/server/utils/embeddings'
 import { chunkPages } from '~/server/utils/retrieval'
+import { createServiceClient } from '~/server/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
-  const body = await readBody<{ docId: string; storagePath?: string; sourceUrl?: string }>(event)
+  const body = await readBody<{
+    docId: string
+    storagePath?: string
+    sourceUrl?: string
+  }>(event)
 
   if (!body?.docId) {
     throw createError({ statusCode: 400, statusMessage: 'docId required' })
@@ -18,7 +25,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Sign in required' })
   }
 
-  const supabase = serverSupabaseClient(event)
+  // ✅ use our own Supabase service client (NOT serverSupabaseClient)
+  const supabase = createServiceClient()
 
   const { data: doc, error: docError } = await supabase
     .from('documents')
