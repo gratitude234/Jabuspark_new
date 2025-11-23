@@ -12,27 +12,36 @@ export const useAuth = defineStore('auth', {
     error: null as string | null,
     listenerBound: false,
   }),
+
   getters: {
     isLoggedIn: (state) => Boolean(state.user),
   },
+
   actions: {
     async init() {
       const client = useSupabaseClient()
       this.loading = true
+      this.error = null
+
       try {
-        const { data } = await client.auth.getSession()
-        this.session = data.session
+        const { data, error } = await client.auth.getSession()
+        if (error) throw error
+
+        this.session = data.session ?? null
         this.user = data.session?.user ?? null
+
         if (this.user) {
           await this.ensureProfile(this.user)
           await this.fetchProfile()
         } else {
           this.profile = null
         }
+
         if (!this.listenerBound) {
           client.auth.onAuthStateChange(async (_event, session) => {
-            this.session = session
+            this.session = session ?? null
             this.user = session?.user ?? null
+
             if (this.user) {
               await this.ensureProfile(this.user)
               await this.fetchProfile()
@@ -42,37 +51,77 @@ export const useAuth = defineStore('auth', {
           })
           this.listenerBound = true
         }
-      } catch (error: any) {
-        this.error = error.message
+      } catch (err: any) {
+        console.error('auth.init error', err)
+        this.error = err?.message || 'Failed to initialise auth.'
       } finally {
         this.loading = false
       }
     },
-    async signIn(email: string) {
+
+    /**
+     * Email + password sign-in (no magic link).
+     * Call this from SignInCard as auth.signIn(email, password).
+     */
+    async signIn(email: string, password: string) {
       const client = useSupabaseClient()
       this.loading = true
-      const { error } = await client.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } })
-      this.loading = false
-      if (error) throw error
+      this.error = null
+
+      try {
+        const { data, error } = await client.auth.signInWithPassword({
+          email,
+          password,
+        })
+
+        if (error) throw error
+
+        this.session = data.session ?? null
+        this.user = data.user ?? data.session?.user ?? null
+
+        if (this.user) {
+          await this.ensureProfile(this.user)
+          await this.fetchProfile()
+        }
+
+        return this.user
+      } catch (err: any) {
+        console.error('auth.signIn error', err)
+        this.error = err?.message || 'Sign in failed.'
+        throw err
+      } finally {
+        this.loading = false
+      }
     },
+
     async ensureProfile(user: User | null) {
       if (!user) return
       const client = useSupabaseClient()
+
       const payload: Partial<Profile> & { id: string } = { id: user.id }
 
-      // Only send fields we actually have to avoid overwriting profile data with fallbacks
       if (user.email) payload.email = user.email
-      if (user.user_metadata?.full_name) payload.full_name = user.user_metadata.full_name
-      if (user.user_metadata?.avatar_url) payload.avatar_url = user.user_metadata.avatar_url
+      if (user.user_metadata?.full_name) {
+        payload.full_name = user.user_metadata.full_name
+      }
+      if (user.user_metadata?.avatar_url) {
+        payload.avatar_url = user.user_metadata.avatar_url
+      }
 
-      const { error } = await client.from('profiles').upsert(payload, { onConflict: 'id' })
+      const { error } = await client
+        .from('profiles')
+        .upsert(payload, { onConflict: 'id' })
+
       if (error) {
         console.error('ensureProfile error', error)
       }
     },
+
     async fetchProfile() {
       if (!this.user) return
+
       await this.ensureProfile(this.user)
+
       const client = useSupabaseClient()
       const { data, error } = await client
         .from('profiles')
@@ -81,18 +130,27 @@ export const useAuth = defineStore('auth', {
         )
         .eq('id', this.user.id)
         .maybeSingle()
+
       if (error) {
         console.error('fetchProfile error', error)
         return
       }
+
       this.profile = (data as Profile) || null
     },
+
     async signOut() {
       const client = useSupabaseClient()
-      await client.auth.signOut()
-      this.session = null
-      this.user = null
-      this.profile = null
+      try {
+        await client.auth.signOut()
+      } catch (err) {
+        console.error('auth.signOut error', err)
+      } finally {
+        this.session = null
+        this.user = null
+        this.profile = null
+        this.error = null
+      }
     },
   },
 })

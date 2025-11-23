@@ -332,7 +332,6 @@ async function onAvatarSelected(event: Event) {
     return
   }
 
-  // 2 MB limit
   const maxSize = 2 * 1024 * 1024
   if (file.size > maxSize) {
     avatarError.value = 'Image too large. Please use a file under 2 MB.'
@@ -343,13 +342,10 @@ async function onAvatarSelected(event: Event) {
   isUploadingAvatar.value = true
 
   try {
-    const bucket = 'avatars' // must match Supabase bucket name
+    const bucket = 'avatars'
     const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
     const filePath = `${auth.user.id}/${Date.now()}.${ext}`
 
-    console.log('[avatar] uploading to', bucket, filePath)
-
-    // 1) Upload to storage
     const { error: uploadError } = await client.storage
       .from(bucket)
       .upload(filePath, file, {
@@ -357,30 +353,19 @@ async function onAvatarSelected(event: Event) {
         upsert: true,
       })
 
-    if (uploadError) {
-      console.error('[avatar] upload error', uploadError)
-      throw uploadError
-    }
+    if (uploadError) throw uploadError
 
-    // 2) Get public URL
     const {
       data: { publicUrl },
     } = client.storage.from(bucket).getPublicUrl(filePath)
 
-    console.log('[avatar] public url', publicUrl)
-
-    // 3) Save to profiles
     const { error: updateError } = await client
       .from('profiles')
       .update({ avatar_url: publicUrl })
       .eq('id', auth.user.id)
 
-    if (updateError) {
-      console.error('[avatar] profile update error', updateError)
-      throw updateError
-    }
+    if (updateError) throw updateError
 
-    // 4) Update local profile so UI reacts immediately
     if (auth.profile) {
       auth.profile.avatar_url = publicUrl
     }
@@ -392,7 +377,6 @@ async function onAvatarSelected(event: Event) {
       err?.message || 'Could not upload photo. Please try again.'
   } finally {
     isUploadingAvatar.value = false
-    // reset input so selecting same file again still triggers change
     target.value = ''
   }
 }
@@ -473,7 +457,6 @@ async function fetchStats() {
 
     if (sessionsError) {
       if (sessionsError.code === '42P01') {
-        // fall back to legacy drills table
         await fetchLegacyStats()
         return
       }
@@ -524,7 +507,7 @@ async function fetchLegacyStats() {
   const { data, error } = await client
     .from('drills')
     .select('score, accuracy')
-    .eq('user_id', auth.user.id)
+    .eq('user_id', auth.user?.id)
 
   if (error) {
     console.warn('Legacy drills stats failed', error.message)
@@ -545,6 +528,10 @@ async function fetchLegacyStats() {
     stats.correct = 0
     stats.last7 = 0
   }
+}
+
+async function fetchWeakAreas() {
+  // your existing implementation (not shown in your snippet)
 }
 
 function loadGoals() {

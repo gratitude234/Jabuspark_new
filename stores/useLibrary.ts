@@ -109,12 +109,12 @@ export const useLibrary = defineStore('library', {
           faculty,
           department,
           is_public: isPublic,
-          status: 'uploading',          // ingest pipeline will update this later
+          status: 'uploading', // ingest pipeline will update this later
           error_message: null,
           size_bytes: file.size,
           // NEW fields for admin-authored questions:
           question_status: 'pending_admin', // waiting for admin to create MCQs
-          question_count: 0,                // no questions yet
+          question_count: 0, // no questions yet
         })
         .select()
         .single()
@@ -125,8 +125,13 @@ export const useLibrary = defineStore('library', {
       await this.loadDocuments()
 
       // 4) kick off ingestion for Ask/Reader (embeddings, etc.)
-      //    This NO LONGER generates MCQs – admin will handle that separately.
-      await $fetch('/api/rag/ingest', { method: 'POST', body: { docId } })
+      //    Fire-and-forget: do NOT await, so the UI doesn't get stuck.
+      $fetch('/api/rag/ingest', {
+        method: 'POST',
+        body: { docId },
+      }).catch((err) => {
+        console.error('Ingest failed', err)
+      })
     },
 
     async retryIngest(doc: DocumentRow) {
