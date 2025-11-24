@@ -842,35 +842,29 @@ watch(
 )
 
 function selectFile(mode: 'personal' | 'course' = 'personal') {
+  console.log('[home] selectFile', { mode })
   uploadMode.value = mode
-  console.log('[index] selectFile', { mode })
   // open file dialog directly from the button click (user gesture)
-  if (!fileInput.value) {
-    console.warn('[index] selectFile: fileInput ref is null')
-    return
-  }
-  fileInput.value.click()
+  fileInput.value?.click()
 }
 
 async function handleUpload(event: Event) {
-  console.log('[index] handleUpload: change event fired')
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
-  if (!file) {
-    console.warn('[index] handleUpload: no file selected')
-    return
-  }
-
-  console.log('[index] handleUpload: got file', {
-    name: file.name,
-    size: file.size,
-    type: file.type,
-    mode: uploadMode.value,
+  console.log('[home] handleUpload change event', {
+    hasFile: !!file,
+    uploadMode: uploadMode.value,
   })
+  if (!file) return
 
   try {
     uploading.value = true
-    const t0 = Date.now()
+    console.log('[home] starting upload via store', {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      mode: uploadMode.value,
+    })
 
     if (uploadMode.value === 'course') {
       const defaultCourse =
@@ -885,13 +879,11 @@ async function handleUpload(event: Event) {
       }
       if (!input) {
         toasts.error('Course code is required for course library upload.')
-        console.warn('[index] handleUpload: no course code entered')
         return
       }
       const trimmed = input.trim()
       if (!trimmed) {
         toasts.error('Course code is required for course library upload.')
-        console.warn('[index] handleUpload: empty course code after trim')
         return
       }
 
@@ -900,9 +892,6 @@ async function handleUpload(event: Event) {
         window.localStorage.setItem(LAST_COURSE_KEY, trimmed)
       }
 
-      console.log('[index] handleUpload: calling uploadDocument (course)', {
-        course: uploadCourse.value,
-      })
       await library.uploadDocument(file, {
         visibility: 'course',
         course: uploadCourse.value,
@@ -910,7 +899,6 @@ async function handleUpload(event: Event) {
       })
       toasts.success('Course pack uploaded. It will appear after approval.')
     } else {
-      console.log('[index] handleUpload: calling uploadDocument (personal)')
       await library.uploadDocument(file, {
         visibility: 'personal',
         course: null,
@@ -918,22 +906,17 @@ async function handleUpload(event: Event) {
       toasts.success('Upload received. Processing will start shortly.')
     }
 
-    const t1 = Date.now()
-    console.log('[index] handleUpload: uploadDocument resolved', {
-      ms: t1 - t0,
-    })
-
+    console.log('[home] upload finished OK, reloading docs')
     await library.loadDocuments()
-    console.log('[index] handleUpload: documents reloaded')
   } catch (error: any) {
-    console.error('[index] handleUpload ERROR', error)
+    console.error('[home] upload failed', error)
     toasts.error(error?.message || 'Upload failed')
   } finally {
     uploading.value = false
     target.value = ''
     uploadMode.value = 'personal'
     uploadCourse.value = null
-    console.log('[index] handleUpload: finished, state reset')
+    console.log('[home] upload cleanup done')
   }
 }
 
