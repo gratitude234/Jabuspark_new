@@ -1,101 +1,79 @@
 // server/api/docs/upload.post.ts
 import { createError, readMultipartFormData } from 'h3'
-import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
-import { randomUUID } from 'crypto'
-import path from 'node:path'
+import { serverSupabaseUser, serverSupabaseClient } from '#supabase/server'
+
+const MAX_BYTES = 5 * 1024 * 1024 // 5 MB
 
 export default defineEventHandler(async (event) => {
-  const supabase = await serverSupabaseClient(event)
   const user = await serverSupabaseUser(event)
-
   if (!user) {
     throw createError({ statusCode: 401, statusMessage: 'Sign in required' })
   }
 
-  // --- 1) Parse multipart form data ---
   const form = await readMultipartFormData(event)
-
   if (!form) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'No form data received',
-    })
+    throw createError({ statusCode: 400, statusMessage: 'No form data' })
   }
-
-  const getField = (name: string) =>
-    form.find((p) => p.name === name)?.data?.toString('utf8') ?? ''
 
   const filePart = form.find((p) => p.name === 'file')
+  const metaPart = form.find((p) => p.name === 'meta')
 
-  if (!filePart || !filePart.data || !filePart.filename) {
+  if (!filePart || !filePart.data) {
+    throw createError({ statusCode: 400, statusMessage: 'File is required' })
+  }
+
+  if (filePart.data.length > MAX_BYTES) {
     throw createError({
-      statusCode: 400,
-      statusMessage: 'Missing file field in upload',
+      statusCode: 413,
+      statusMessage: `File too large. Max ${(MAX_BYTES / (1024 * 1024)).toFixed(1)} MB`,
     })
   }
 
-  const visibility =
-    (getField('visibility') as 'personal' | 'course') || 'personal'
-  const course = getField('course') || null
-  const docType = getField('docType') || null
-  const courseCode = getField('courseCode') || course
-  const level = getField('level') || null
-  const faculty = getField('faculty') || null
-  const department = getField('department') || null
-  const isPublic = getField('isPublic') === 'true'
+  const meta = metaPart?.data
+    ? JSON.parse(metaPart.data.toString('utf8'))
+    : {}
 
-  // Course docs must be reviewed; personal docs are "approved" by default
-  const approvalStatus = visibility === 'course' ? 'pending' : 'approved'
+  const supabase = await serverSupabaseClient(event)
 
-  const docId = randomUUID()
+  // generate IDs / path however you like
+  const ext = (filePart.filename?.split('.').pop() || 'pdf').toLowerCase()
+  const docId = crypto.randomUUID()
+  const path = `user/${user.id}/${docId}.${ext}`
 
-  // --- 2) Build storage path ---
-  const ext =
-    path.extname(filePart.filename || '').replace('.', '').toLowerCase() ||
-    'pdf'
-  const storagePath = `user/${user.id}/${docId}.${ext}`
-
-  // --- 3) Upload to Supabase Storage ---
+  // 1) upload to storage
   const { error: storageError } = await supabase.storage
     .from('docs')
-    .upload(storagePath, filePart.data, {
-      upsert: true,
+    .upload(path, filePart.data, {
       contentType: filePart.type || 'application/pdf',
+      upsert: true,
     })
 
   if (storageError) {
     throw createError({
-      statusCode: 400,
-      statusMessage: `Storage upload failed: ${storageError.message}`,
+      statusCode: 500,
+      statusMessage: storageError.message || 'Storage upload failed',
     })
   }
 
-  // --- 4) Insert document row ---
-  const baseTitle = filePart.filename.replace(/\.pdf$/i, '')
-
+  // 2) insert document row (adjust columns to match your schema)
   const { error: insertError } = await supabase
     .from('documents')
     .insert({
       id: docId,
       user_id: user.id,
-      title: baseTitle,
-      course,
-      course_code: courseCode,
-      kind: null,
-      doc_type: docType,
-      storage_path: storagePath,
-      pages_count: null,
-      chunks_count: null,
-      visibility,
-      approval_status: approvalStatus,
-      level,
-      faculty,
-      department,
-      is_public: isPublic,
+      title: filePart.filename?.replace(/\.pdf$/i, '') || 'Untitled',
+      storage_path: path,
+      visibility: meta.visibility ?? 'personal',
+      course: meta.course ?? null,
+      course_code: meta.courseCode ?? meta.course ?? null,
+      doc_type: meta.docType ?? null,
+      level: meta.level ?? null,
+      faculty: meta.faculty ?? null,
+      department: meta.department ?? null,
+      is_public: meta.isPublic ?? false,
       status: 'uploading',
       error_message: null,
       size_bytes: filePart.data.length,
-      // waiting for admin to add MCQs
       question_status: 'pending_admin',
       question_count: 0,
     })
@@ -104,16 +82,13 @@ export default defineEventHandler(async (event) => {
 
   if (insertError) {
     throw createError({
-      statusCode: 400,
-      statusMessage: `DB insert failed: ${insertError.message}`,
+      statusCode: 500,
+      statusMessage: insertError.message || 'Failed to create document row',
     })
   }
 
-  // You can either trigger ingest here, or keep doing it from the client.
-  // For now we'll just respond; your store already calls /api/rag/ingest.
-
   return {
-    success: true,
+    ok: true,
     docId,
   }
 })
