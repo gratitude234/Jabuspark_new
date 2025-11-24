@@ -77,7 +77,6 @@ export const useLibrary = defineStore('library', {
       const department = options?.department ?? null
       const isPublic = options?.isPublic ?? false
 
-      // Course docs must be reviewed; personal docs are "approved" by default
       const approvalStatus = visibility === 'course' ? 'pending' : 'approved'
 
       try {
@@ -131,7 +130,6 @@ export const useLibrary = defineStore('library', {
             status: 'uploading',
             error_message: null,
             size_bytes: file.size,
-            // waiting for admin to add MCQs
             question_status: 'pending_admin',
             question_count: 0,
           })
@@ -146,7 +144,7 @@ export const useLibrary = defineStore('library', {
         await this.loadDocuments()
         console.log('[uploadDocument] 7: after loadDocuments')
 
-        // 4) kick off ingest for Ask/Reader (fire-and-forget)
+        // 4) kick off ingest – fire-and-forget
         console.log('[uploadDocument] 8: trigger ingest', { docId })
         $fetch('/api/rag/ingest', {
           method: 'POST',
@@ -167,7 +165,6 @@ export const useLibrary = defineStore('library', {
         const message =
           err?.statusMessage || err?.message || 'Upload or processing failed'
 
-        // try to mark the doc as failed in DB as well
         try {
           await client
             .from('documents')
@@ -183,7 +180,6 @@ export const useLibrary = defineStore('library', {
           )
         }
 
-        // refresh and show toast
         await this.loadDocuments()
         toasts.error(message)
         throw err
