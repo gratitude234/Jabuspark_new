@@ -81,17 +81,34 @@ export const useLibrary = defineStore('library', {
       const approvalStatus = visibility === 'course' ? 'pending' : 'approved'
 
       try {
+        console.log('[uploadDocument] 1: starting', {
+          docId,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          visibility,
+          course,
+        })
+
         // 1) upload PDF to storage
+        console.log('[uploadDocument] 2: before storage upload', { path })
+        const t0 = Date.now()
         const { error: storageError } = await client.storage
           .from('docs')
           .upload(path, file, {
             upsert: true,
             contentType: 'application/pdf',
           })
+        const t1 = Date.now()
+        console.log('[uploadDocument] 3: after storage upload', {
+          storageError,
+          ms: t1 - t0,
+        })
 
         if (storageError) throw storageError
 
         // 2) insert document row
+        console.log('[uploadDocument] 4: before insert row')
         const { error: insertError } = await client
           .from('documents')
           .insert({
@@ -120,18 +137,33 @@ export const useLibrary = defineStore('library', {
           })
           .select()
           .single()
+        console.log('[uploadDocument] 5: after insert row', { insertError })
 
         if (insertError) throw insertError
 
         // 3) refresh local documents list
+        console.log('[uploadDocument] 6: before loadDocuments')
         await this.loadDocuments()
+        console.log('[uploadDocument] 7: after loadDocuments')
 
-        // 4) kick off ingest for Ask/Reader (embeddings only, no MCQ gen)
-        await $fetch('/api/rag/ingest', {
+        // 4) kick off ingest for Ask/Reader (fire-and-forget)
+        console.log('[uploadDocument] 8: trigger ingest', { docId })
+        $fetch('/api/rag/ingest', {
           method: 'POST',
           body: { docId },
         })
+          .then(() => {
+            console.log('[uploadDocument] 9: ingest finished OK', { docId })
+          })
+          .catch((ingestErr) => {
+            console.error('[uploadDocument] ingest failed', {
+              docId,
+              error: ingestErr,
+            })
+          })
       } catch (err: any) {
+        console.error('[uploadDocument] ERROR', err)
+
         const message =
           err?.statusMessage || err?.message || 'Upload or processing failed'
 
@@ -144,8 +176,11 @@ export const useLibrary = defineStore('library', {
               error_message: message.slice(0, 280),
             })
             .eq('id', docId)
-        } catch {
-          // ignore secondary failure
+        } catch (secondaryErr) {
+          console.error(
+            '[uploadDocument] failed to mark doc as failed',
+            secondaryErr,
+          )
         }
 
         // refresh and show toast
