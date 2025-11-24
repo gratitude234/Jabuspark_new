@@ -647,7 +647,8 @@ const router = useRouter()
 const toasts = useToasts()
 const readyDocs = useReadyDocs(library)
 const supabase = useSupabaseClient()
-const { profile, isLoading: profileLoading, refreshProfile: refreshProfileStore } = useProfile()
+const { profile, isLoading: profileLoading, refreshProfile: refreshProfileStore } =
+  useProfile()
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const uploading = ref(false)
@@ -739,7 +740,6 @@ const heroTitle = computed(() => {
   return 'Your study hub'
 })
 
-// Avatar initials
 const avatarInitials = computed(() =>
   getAvatarInitials(auth.profile?.full_name || auth.user?.email),
 )
@@ -748,7 +748,6 @@ const showResume = computed(
   () => !!library.lastSession && !sessionLoading.value,
 )
 
-// Resume card text
 const resumeTitle = computed(() => {
   const session: any = library.lastSession
   if (!session) return ''
@@ -804,20 +803,34 @@ const coursesLoading = ref(false)
 const coursesError = ref<string | null>(null)
 
 onMounted(async () => {
+  console.log('[index] onMounted')
+
   try {
     await auth.init()
+    console.log('[index] auth.init done', { isLoggedIn: auth.isLoggedIn })
   } catch (err: any) {
+    console.error('[index] auth.init error', err)
     toasts.error(err?.message || 'Failed to initialise auth')
   }
 
   if (!profile.value && !profileLoading.value && auth.isLoggedIn) {
-    await refreshProfileStore()
+    try {
+      console.log('[index] refreshing profile…')
+      await refreshProfileStore()
+    } catch (err) {
+      console.error('[index] refreshProfile error', err)
+    }
   }
 
   try {
     docsLoading.value = true
+    console.log('[index] loading documents…')
     await library.loadDocuments()
+    console.log('[index] documents loaded', {
+      count: library.documents.length,
+    })
   } catch (err: any) {
+    console.error('[index] loadDocuments error', err)
     toasts.error(err?.message || 'Failed to load documents')
   } finally {
     docsLoading.value = false
@@ -825,9 +838,10 @@ onMounted(async () => {
 
   try {
     sessionLoading.value = true
+    console.log('[index] fetchLastSession…')
     await library.fetchLastSession()
-  } catch {
-    // non-fatal
+  } catch (err) {
+    console.error('[index] fetchLastSession error', err)
   } finally {
     sessionLoading.value = false
   }
@@ -842,27 +856,33 @@ watch(
 )
 
 function selectFile(mode: 'personal' | 'course' = 'personal') {
-  console.log('[home] selectFile', { mode })
+  console.log('[index] selectFile', { mode })
   uploadMode.value = mode
-  // open file dialog directly from the button click (user gesture)
   fileInput.value?.click()
 }
 
 async function handleUpload(event: Event) {
+  console.log('[index] handleUpload fired', { eventType: event.type })
+
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
-  console.log('[home] handleUpload change event', {
-    hasFile: !!file,
-    uploadMode: uploadMode.value,
+
+  if (!file) {
+    console.warn('[index] handleUpload: no file selected')
+    return
+  }
+
+  console.log('[index] handleUpload: file selected', {
+    name: file.name,
+    size: file.size,
+    type: file.type,
   })
-  if (!file) return
+
+  const startedAt = Date.now()
 
   try {
     uploading.value = true
-    console.log('[home] starting upload via store', {
-      name: file.name,
-      size: file.size,
-      type: file.type,
+    console.log('[index] handleUpload: starting uploadDocument', {
       mode: uploadMode.value,
     })
 
@@ -878,11 +898,13 @@ async function handleUpload(event: Event) {
           null
       }
       if (!input) {
+        console.warn('[index] handleUpload: no course code entered')
         toasts.error('Course code is required for course library upload.')
         return
       }
       const trimmed = input.trim()
       if (!trimmed) {
+        console.warn('[index] handleUpload: empty course code after trim')
         toasts.error('Course code is required for course library upload.')
         return
       }
@@ -897,26 +919,37 @@ async function handleUpload(event: Event) {
         course: uploadCourse.value,
         docType: 'Lecture handout',
       })
+      console.log('[index] handleUpload: course uploadDocument resolved', {
+        ms: Date.now() - startedAt,
+      })
       toasts.success('Course pack uploaded. It will appear after approval.')
     } else {
       await library.uploadDocument(file, {
         visibility: 'personal',
         course: null,
       })
+      console.log('[index] handleUpload: personal uploadDocument resolved', {
+        ms: Date.now() - startedAt,
+      })
       toasts.success('Upload received. Processing will start shortly.')
     }
 
-    console.log('[home] upload finished OK, reloading docs')
+    console.log('[index] handleUpload: reloading documents…')
     await library.loadDocuments()
+    console.log('[index] handleUpload: documents reloaded', {
+      count: library.documents.length,
+    })
   } catch (error: any) {
-    console.error('[home] upload failed', error)
+    console.error('[index] handleUpload ERROR', error)
     toasts.error(error?.message || 'Upload failed')
   } finally {
     uploading.value = false
     target.value = ''
     uploadMode.value = 'personal'
     uploadCourse.value = null
-    console.log('[home] upload cleanup done')
+    console.log('[index] handleUpload: finished', {
+      durationMs: Date.now() - startedAt,
+    })
   }
 }
 
@@ -946,6 +979,7 @@ async function retryDoc(doc: any) {
     await library.retryIngest(doc)
     toasts.success('Retry started. Check back in a bit.')
   } catch (error: any) {
+    console.error('[index] retryDoc error', error)
     toasts.error(error?.message || 'Retry failed')
   }
 }
@@ -963,6 +997,7 @@ async function loadCourses() {
   coursesError.value = null
 
   try {
+    console.log('[index] loadCourses', { department, level })
     const { data, error } = await supabase
       .from('courses')
       .select('id, code, title')
@@ -972,6 +1007,7 @@ async function loadCourses() {
 
     if (error) throw error
     courses.value = (data as CourseRow[]) || []
+    console.log('[index] loadCourses done', { count: courses.value.length })
   } catch (err: any) {
     console.error('Failed to load courses', err)
     coursesError.value = err?.message || 'Could not load courses.'
