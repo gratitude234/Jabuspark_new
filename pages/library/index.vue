@@ -151,6 +151,7 @@
           </select>
         </div>
 
+        <!-- My courses dropdown -->
         <div
           v-if="coursesStore.myCourses.length"
           class="flex items-center gap-2 text-xs text-slate-400"
@@ -363,6 +364,7 @@ import Card from '~/components/Card.vue'
 import type { DocumentRow } from '~/types/models'
 import { useToasts } from '~/stores/useToasts'
 import { useCourses } from '~/stores/useCourses'
+import { useLibrary } from '~/stores/useLibrary'
 
 const library = useLibrary()
 const router = useRouter()
@@ -377,6 +379,9 @@ const statusFilter = ref<'all' | 'ready' | 'processing' | 'failed'>('all')
 const courseFilter = ref<'all' | string>('all')
 const courseCodeFilter = ref('')
 const levelFilter = ref<'all' | string>('all')
+
+// 🔑 this was missing before
+const selectedCourseId = ref<string | null>(null)
 
 const statusOptions = [
   { value: 'all' as const, label: 'All' },
@@ -426,9 +431,12 @@ const courseOptions = computed<string[]>(() => {
 // Docs for current tab (before search/filters)
 const baseDocs = computed<DocumentRow[]>(() => {
   const docs = sourceTab.value === 'course' ? courseDocs.value : personalDocs.value
+
+  // filter by "My courses" dropdown if any selected
   if (selectedCourseId.value) {
     return docs.filter((doc) => (doc as any).course_id === selectedCourseId.value)
   }
+
   return docs
 })
 
@@ -476,14 +484,14 @@ const filteredDocs = computed<DocumentRow[]>(() => {
         (doc as any).department || '',
         (doc as any).kind || '',
       ]
-      .join(' ')
-      .toLowerCase()
+        .join(' ')
+        .toLowerCase()
 
     return haystack.includes(term)
   })
 })
 
-// Status helpers (for per-doc badge)
+// Status helpers
 function statusLabel(doc: DocumentRow): string {
   const s = (doc as any).status
   if (!s) return ''
