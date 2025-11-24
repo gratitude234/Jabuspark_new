@@ -62,12 +62,6 @@ export const useLibrary = defineStore('library', {
 
       if (!auth.user) throw new Error('Sign in required')
 
-      const client = useSupabaseClient()
-      const docId = crypto.randomUUID()
-
-      const ext = (file.name.split('.').pop() || 'pdf').toLowerCase()
-      const path = `user/${auth.user.id}/${docId}.${ext}`
-
       const visibility = options?.visibility ?? 'personal'
       const course = options?.course ?? null
       const docType = options?.docType ?? null
@@ -77,108 +71,52 @@ export const useLibrary = defineStore('library', {
       const department = options?.department ?? null
       const isPublic = options?.isPublic ?? false
 
-      const approvalStatus = visibility === 'course' ? 'pending' : 'approved'
+      const payloadMeta = {
+        visibility,
+        course,
+        docType,
+        courseCode,
+        level,
+        faculty,
+        department,
+        isPublic,
+      }
 
       try {
-        console.log('[uploadDocument] 1: starting', {
-          docId,
+        console.log('[uploadDocument] browser: starting', {
           name: file.name,
           size: file.size,
           type: file.type,
-          visibility,
-          course,
+          meta: payloadMeta,
         })
 
-        // 1) upload PDF to storage
-        console.log('[uploadDocument] 2: before storage upload', { path })
-        const t0 = Date.now()
-        const { error: storageError } = await client.storage
-          .from('docs')
-          .upload(path, file, {
-            upsert: true,
-            contentType: 'application/pdf',
-          })
-        const t1 = Date.now()
-        console.log('[uploadDocument] 3: after storage upload', {
-          storageError,
-          ms: t1 - t0,
-        })
+        // Build FormData for /api/docs/upload
+        const form = new FormData()
+        form.append('file', file)
+        form.append('meta', JSON.stringify(payloadMeta))
 
-        if (storageError) throw storageError
+        console.log('[uploadDocument] browser: sending to /api/docs/upload')
 
-        // 2) insert document row
-        console.log('[uploadDocument] 4: before insert row')
-        const { error: insertError } = await client
-          .from('documents')
-          .insert({
-            id: docId,
-            user_id: auth.user.id,
-            title: file.name.replace(/\.pdf$/i, ''),
-            course,
-            course_code: courseCode,
-            kind: null,
-            doc_type: docType,
-            storage_path: path,
-            pages_count: null,
-            chunks_count: null,
-            visibility,
-            approval_status: approvalStatus,
-            level,
-            faculty,
-            department,
-            is_public: isPublic,
-            status: 'uploading',
-            error_message: null,
-            size_bytes: file.size,
-            question_status: 'pending_admin',
-            question_count: 0,
-          })
-          .select()
-          .single()
-        console.log('[uploadDocument] 5: after insert row', { insertError })
-
-        if (insertError) throw insertError
-
-        // 3) refresh local documents list
-        console.log('[uploadDocument] 6: before loadDocuments')
-        await this.loadDocuments()
-        console.log('[uploadDocument] 7: after loadDocuments')
-
-        // 4) kick off ingest – fire-and-forget
-        console.log('[uploadDocument] 8: trigger ingest', { docId })
-        $fetch('/api/rag/ingest', {
+        const result: any = await $fetch('/api/docs/upload', {
           method: 'POST',
-          body: { docId },
+          body: form,
         })
-          .then(() => {
-            console.log('[uploadDocument] 9: ingest finished OK', { docId })
-          })
-          .catch((ingestErr) => {
-            console.error('[uploadDocument] ingest failed', {
-              docId,
-              error: ingestErr,
-            })
-          })
+
+        console.log('[uploadDocument] browser: upload OK', result)
+
+        // Refresh local documents list
+        await this.loadDocuments()
       } catch (err: any) {
         console.error('[uploadDocument] ERROR', err)
 
         const message =
           err?.statusMessage || err?.message || 'Upload or processing failed'
 
-        try {
-          await client
-            .from('documents')
-            .update({
-              status: 'failed',
-              error_message: message.slice(0, 280),
-            })
-            .eq('id', docId)
-        } catch (secondaryErr) {
-          console.error(
-            '[uploadDocument] failed to mark doc as failed',
-            secondaryErr,
-          )
-        }
+        const client = useSupabaseClient()
+
+        // we don't know the docId here because backend is generating it,
+        // so we can't reliably mark a specific row as failed.
+        // (backend already sets error_message/status if it fails.)
 
         await this.loadDocuments()
         toasts.error(message)
@@ -241,10 +179,10 @@ export const useLibrary = defineStore('library', {
       if (data) {
         this.lastSession = {
           id: data.id,
-          docId: data.doc_id || data.metadata?.docId,
-          page: data.metadata?.page,
+          docId: data.doc_id || (data as any).metadata?.docId,
+          page: (data as any).metadata?.page,
           mode: data.mode,
-          metadata: data.metadata,
+          metadata: (data as any).metadata,
         }
       }
     },

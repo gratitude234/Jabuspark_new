@@ -17,7 +17,8 @@
     "@vueuse/core": "^10.9.0",
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^4.4.168",
-    "pinia": "^2.1.7"
+    "pinia": "^2.1.7",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@nuxt/kit": "3.17.7",
