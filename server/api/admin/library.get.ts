@@ -47,14 +47,13 @@ export default defineEventHandler(async (event) => {
     builder = builder.eq('visibility', query.visibility)
   }
 
+  // 🔧 FIXED: simple search, no joins in the OR clause
   if (query.search && typeof query.search === 'string' && query.search.trim()) {
     const term = `%${query.search.trim()}%`
     builder = builder.or(
       [
         `title.ilike.${term}`,
         `course_code.ilike.${term}`,
-        `uploader.email.ilike.${term}`,
-        `uploader.full_name.ilike.${term}`,
       ].join(',')
     )
   }
