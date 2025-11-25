@@ -1,4 +1,4 @@
-// server/api/docs/upload.post.ts
+// file: server/api/docs/upload.post.ts
 import { createError, readMultipartFormData } from 'h3'
 import { serverSupabaseUser, serverSupabaseClient } from '#supabase/server'
 
@@ -55,7 +55,15 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // 2) insert document row (adjust columns to match your schema)
+  // decide visibility + approval status
+  const visibility: 'personal' | 'course' =
+    meta.visibility === 'course' ? 'course' : 'personal'
+
+  // personal docs can be auto-approved; course docs stay pending for admin
+  const approvalStatus =
+    visibility === 'personal' ? 'approved' : 'pending'
+
+  // 2) insert document row
   const { error: insertError } = await supabase
     .from('documents')
     .insert({
@@ -63,7 +71,10 @@ export default defineEventHandler(async (event) => {
       user_id: user.id,
       title: filePart.filename?.replace(/\.pdf$/i, '') || 'Untitled',
       storage_path: path,
-      visibility: meta.visibility ?? 'personal',
+
+      visibility,
+      approval_status: approvalStatus,
+
       course: meta.course ?? null,
       course_code: meta.courseCode ?? meta.course ?? null,
       doc_type: meta.docType ?? null,
@@ -71,9 +82,12 @@ export default defineEventHandler(async (event) => {
       faculty: meta.faculty ?? null,
       department: meta.department ?? null,
       is_public: meta.isPublic ?? false,
+
       status: 'uploading',
       error_message: null,
       size_bytes: filePart.data.length,
+
+      // question pipeline flags
       question_status: 'pending_admin',
       question_count: 0,
     })

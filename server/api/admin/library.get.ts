@@ -1,3 +1,4 @@
+// file: server/api/admin/library.get.ts
 import { createError } from 'h3'
 import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
 import { requireAdminRole } from '~/server/utils/admin'
@@ -10,38 +11,61 @@ export default defineEventHandler(async (event) => {
   if (!user) {
     throw createError({ statusCode: 401, statusMessage: 'Auth required' })
   }
+
+  // Ensure the caller is an admin
   await requireAdminRole(supabase, user.id)
 
   let builder = supabase
     .from('documents')
     .select(
-      `id, title, visibility, approval_status, question_status, question_count, course_code, created_at, size_bytes,
-       uploader:profiles!documents_user_id_fkey(full_name,email),
-       course:courses!documents_course_id_fkey(code)`
+      `
+      id,
+      title,
+      visibility,
+      approval_status,
+      question_status,
+      question_count,
+      course_code,
+      created_at,
+      size_bytes,
+      uploader:profiles!documents_user_id_fkey(full_name,email),
+      course:courses!documents_course_id_fkey(code)
+    `
     )
     .order('created_at', { ascending: false })
 
-  if (query.approval_status && typeof query.approval_status === 'string') {
+  // filters
+  if (query.approval_status && typeof query.approval_status === 'string' && query.approval_status !== 'all') {
     builder = builder.eq('approval_status', query.approval_status)
   }
-  if (query.question_status && typeof query.question_status === 'string') {
+
+  if (query.question_status && typeof query.question_status === 'string' && query.question_status !== 'all') {
     builder = builder.eq('question_status', query.question_status)
   }
-  if (query.visibility && typeof query.visibility === 'string') {
+
+  if (query.visibility && typeof query.visibility === 'string' && query.visibility !== 'all') {
     builder = builder.eq('visibility', query.visibility)
   }
+
   if (query.search && typeof query.search === 'string' && query.search.trim()) {
     const term = `%${query.search.trim()}%`
     builder = builder.or(
-      `title.ilike.${term},course_code.ilike.${term},uploader.email.ilike.${term},uploader.full_name.ilike.${term}`,
+      [
+        `title.ilike.${term}`,
+        `course_code.ilike.${term}`,
+        `uploader.email.ilike.${term}`,
+        `uploader.full_name.ilike.${term}`,
+      ].join(',')
     )
   }
 
   const { data, error } = await builder
+
   if (error) {
     throw createError({ statusCode: 500, statusMessage: error.message })
   }
 
+  // Normalize shape for the frontend
   return (data || []).map((doc: any) => ({
     id: doc.id,
     title: doc.title,
