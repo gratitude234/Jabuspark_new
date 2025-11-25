@@ -1,14 +1,13 @@
-<!-- file: pages/admin/docs/index.vue -->
 <template>
   <div class="p-6 space-y-6">
-    <header class="flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-semibold">Documents</h1>
-        <p class="text-sm text-gray-500">Review uploads and generate exam-style questions.</p>
-      </div>
+    <header>
+      <h1 class="text-2xl font-semibold">Documents</h1>
+      <p class="text-sm text-gray-500">
+        Showing data from /api/admin/library.
+      </p>
     </header>
 
-    <!-- Filters -->
+    <!-- Simple filters (client-side only) -->
     <section class="rounded-xl bg-white shadow-sm p-4 flex flex-wrap gap-4">
       <div class="flex flex-col">
         <label class="text-xs font-medium text-gray-500 mb-1">Approval</label>
@@ -56,12 +55,12 @@
         <thead class="bg-gray-50 border-b">
           <tr>
             <th class="px-4 py-2 text-left font-medium text-gray-500">Title</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-500">Uploader</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-500">Course</th>
+            <th class="px-4 py-2 text-left font-medium text-gray-500">Visibility</th>
             <th class="px-4 py-2 text-left font-medium text-gray-500">Approval</th>
+            <th class="px-4 py-2 text-left font-medium text-gray-500">Question status</th>
             <th class="px-4 py-2 text-left font-medium text-gray-500">Questions</th>
+            <th class="px-4 py-2 text-left font-medium text-gray-500">Course</th>
             <th class="px-4 py-2 text-left font-medium text-gray-500">Created</th>
-            <th class="px-4 py-2 text-right font-medium text-gray-500">Actions</th>
           </tr>
         </thead>
 
@@ -73,66 +72,27 @@
           >
             <td class="px-4 py-2">
               <div class="font-medium text-gray-900">{{ doc.title }}</div>
-              <div class="text-xs text-gray-500">{{ doc.visibility }}</div>
-            </td>
-
-            <td class="px-4 py-2">
-              <div class="text-gray-900 text-sm">
-                {{ doc.uploader_name || '—' }}
-              </div>
-              <div class="text-xs text-gray-500">
-                {{ doc.uploader_email || '—' }}
+              <div class="text-[10px] text-gray-500 break-all">
+                {{ doc.id }}
               </div>
             </td>
-
-            <td class="px-4 py-2 text-sm text-gray-700">
+            <td class="px-4 py-2 text-xs text-gray-700">
+              {{ doc.visibility }}
+            </td>
+            <td class="px-4 py-2 text-xs text-gray-700">
+              {{ doc.approval_status }}
+            </td>
+            <td class="px-4 py-2 text-xs text-gray-700">
+              {{ doc.question_status }}
+            </td>
+            <td class="px-4 py-2 text-xs text-gray-700">
+              {{ doc.question_count }}
+            </td>
+            <td class="px-4 py-2 text-xs text-gray-700">
               {{ doc.course_code || '—' }}
             </td>
-
-            <td class="px-4 py-2 text-sm">
-              <span
-                class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-                :class="badgeClass(doc.approval_status)"
-              >
-                {{ doc.approval_status }}
-              </span>
-            </td>
-
-            <td class="px-4 py-2 text-sm">
-              <div class="flex flex-col gap-1">
-                <span
-                  class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-                  :class="badgeClass(doc.question_status)"
-                >
-                  {{ doc.question_status }}
-                </span>
-                <span class="text-xs text-gray-500">
-                  {{ doc.question_count }} questions
-                </span>
-              </div>
-            </td>
-
-            <td class="px-4 py-2 text-xs text-gray-600">
+            <td class="px-4 py-2 text-xs text-gray-700">
               {{ formatDate(doc.created_at) }}
-            </td>
-
-            <td class="px-4 py-2">
-              <div class="flex justify-end gap-2">
-                <button
-                  class="text-xs px-3 py-1 rounded-full border border-gray-300 hover:bg-gray-100"
-                  @click="goToDoc(doc.id)"
-                >
-                  View
-                </button>
-                <button
-                  class="text-xs px-3 py-1 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
-                  :disabled="doc.question_status === 'has_questions' || generatingId === doc.id"
-                  @click="onGenerate(doc.id)"
-                >
-                  <span v-if="generatingId === doc.id">Generating…</span>
-                  <span v-else>Generate</span>
-                </button>
-              </div>
             </td>
           </tr>
         </tbody>
@@ -140,7 +100,7 @@
         <tbody v-else-if="pending">
           <tr>
             <td colspan="7" class="px-4 py-6 text-center text-sm text-gray-500">
-              Loading documents…
+              Loading…
             </td>
           </tr>
         </tbody>
@@ -154,13 +114,23 @@
         </tbody>
       </table>
     </section>
+
+    <!-- Debug: raw JSON from API so we can SEE it -->
+    <section class="mt-4">
+      <h2 class="text-sm font-semibold text-gray-600 mb-1">
+        Debug: raw response from /api/admin/library
+      </h2>
+      <pre class="text-xs bg-gray-900 text-gray-100 p-3 rounded-lg overflow-auto max-h-64">
+{{ docs }}
+      </pre>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
 definePageMeta({
-  middleware: ['admin'], // keep if you have it
-  layout: 'admin',       // keep if you have an admin layout
+  middleware: ['admin'],
+  layout: 'admin',
 })
 
 type AdminDoc = {
@@ -173,12 +143,24 @@ type AdminDoc = {
   course_code: string | null
   created_at: string
   size_bytes: number | null
-  uploader_name: string | null
-  uploader_email: string | null
 }
 
-const router = useRouter()
+// 1) Fetch once, no params
+const { data, pending, error } = await useAsyncData<AdminDoc[]>(
+  'admin-docs',
+  () => $fetch('/api/admin/library'),
+)
 
+// 2) Normalised ref of docs
+const docs = computed(() => data.value || [])
+
+// Small console log so you can see it in DevTools
+watchEffect(() => {
+  // comment this out later if it's noisy
+  console.log('admin docs data:', docs.value)
+})
+
+// 3) Client-side filters
 const filters = reactive({
   approval: 'all',
   question: 'all',
@@ -186,81 +168,30 @@ const filters = reactive({
   search: '',
 })
 
-const {
-  data: docs,
-  pending,
-  error,
-  refresh,
-} = await useAsyncData<AdminDoc[]>('admin-docs', () =>
-  $fetch('/api/admin/library'),
-)
-
-// 🚨 filter on the client, not in the API
 const filteredDocs = computed<AdminDoc[]>(() => {
-  let list = docs.value || []
+  let list = docs.value
 
   if (filters.approval !== 'all') {
-    list = list.filter(d => d.approval_status === filters.approval)
+    list = list.filter((d) => d.approval_status === filters.approval)
   }
-
   if (filters.question !== 'all') {
-    list = list.filter(d => d.question_status === filters.question)
+    list = list.filter((d) => d.question_status === filters.question)
   }
-
   if (filters.visibility !== 'all') {
-    list = list.filter(d => d.visibility === filters.visibility)
+    list = list.filter((d) => d.visibility === filters.visibility)
   }
-
   if (filters.search.trim()) {
     const term = filters.search.trim().toLowerCase()
-    list = list.filter(d => {
-      const inTitle = d.title?.toLowerCase().includes(term)
-      const inCourse = d.course_code?.toLowerCase().includes(term)
-      const inUploader =
-        d.uploader_name?.toLowerCase().includes(term) ||
-        d.uploader_email?.toLowerCase().includes(term)
-      return inTitle || inCourse || inUploader
+    list = list.filter((d) => {
+      return (
+        d.title.toLowerCase().includes(term) ||
+        (d.course_code && d.course_code.toLowerCase().includes(term))
+      )
     })
   }
 
   return list
 })
-
-const generatingId = ref<string | null>(null)
-
-const goToDoc = (id: string) => {
-  router.push(`/admin/docs/${id}`)
-}
-
-const onGenerate = async (id: string) => {
-  try {
-    generatingId.value = id
-    await $fetch(`/api/admin/docs/${id}/generate-questions`, {
-      method: 'POST',
-    })
-    await refresh()
-  } catch (err) {
-    console.error('Failed to generate questions', err)
-  } finally {
-    generatingId.value = null
-  }
-}
-
-const badgeClass = (status: string) => {
-  switch (status) {
-    case 'approved':
-    case 'has_questions':
-      return 'bg-green-100 text-green-700'
-    case 'pending':
-    case 'pending_admin':
-      return 'bg-yellow-100 text-yellow-700'
-    case 'archived':
-    case 'none':
-      return 'bg-gray-100 text-gray-600'
-    default:
-      return 'bg-gray-100 text-gray-600'
-  }
-}
 
 const formatDate = (value?: string) => {
   if (!value) return '—'
