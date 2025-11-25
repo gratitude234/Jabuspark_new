@@ -4,7 +4,6 @@ import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
 import { requireAdminRole } from '~/server/utils/admin'
 
 export default defineEventHandler(async (event) => {
-  const query = getQuery(event)
   const supabase = await serverSupabaseClient(event)
   const user = await serverSupabaseUser(event)
 
@@ -15,7 +14,8 @@ export default defineEventHandler(async (event) => {
   // Ensure the caller is an admin
   await requireAdminRole(supabase, user.id)
 
-  let builder = supabase
+  // 🚨 No query filters here – always return all docs
+  const { data, error } = await supabase
     .from('documents')
     .select(
       `
@@ -33,32 +33,6 @@ export default defineEventHandler(async (event) => {
     `
     )
     .order('created_at', { ascending: false })
-
-  // filters
-  if (query.approval_status && typeof query.approval_status === 'string' && query.approval_status !== 'all') {
-    builder = builder.eq('approval_status', query.approval_status)
-  }
-
-  if (query.question_status && typeof query.question_status === 'string' && query.question_status !== 'all') {
-    builder = builder.eq('question_status', query.question_status)
-  }
-
-  if (query.visibility && typeof query.visibility === 'string' && query.visibility !== 'all') {
-    builder = builder.eq('visibility', query.visibility)
-  }
-
-  // 🔧 FIXED: simple search, no joins in the OR clause
-  if (query.search && typeof query.search === 'string' && query.search.trim()) {
-    const term = `%${query.search.trim()}%`
-    builder = builder.or(
-      [
-        `title.ilike.${term}`,
-        `course_code.ilike.${term}`,
-      ].join(',')
-    )
-  }
-
-  const { data, error } = await builder
 
   if (error) {
     throw createError({ statusCode: 500, statusMessage: error.message })

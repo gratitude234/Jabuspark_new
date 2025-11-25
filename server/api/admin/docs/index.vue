@@ -44,7 +44,7 @@
         <input
           v-model="filters.search"
           type="text"
-          placeholder="Title, course code, uploader…"
+          placeholder="Title, course code…"
           class="border rounded-md px-3 py-1 text-sm w-full"
         />
       </div>
@@ -65,9 +65,9 @@
           </tr>
         </thead>
 
-        <tbody v-if="!pending && docs?.length">
+        <tbody v-if="!pending && filteredDocs.length">
           <tr
-            v-for="doc in docs"
+            v-for="doc in filteredDocs"
             :key="doc.id"
             class="border-b last:border-b-0 hover:bg-gray-50"
           >
@@ -159,8 +159,8 @@
 
 <script setup lang="ts">
 definePageMeta({
-  middleware: ['admin'], // remove if you don’t have this yet
-  layout: 'admin',       // remove if you don’t have an admin layout
+  middleware: ['admin'], // keep if you have it
+  layout: 'admin',       // keep if you have an admin layout
 })
 
 type AdminDoc = {
@@ -186,32 +186,45 @@ const filters = reactive({
   search: '',
 })
 
-const buildParams = () => ({
-  approval_status: filters.approval !== 'all' ? filters.approval : undefined,
-  question_status: filters.question !== 'all' ? filters.question : undefined,
-  visibility: filters.visibility !== 'all' ? filters.visibility : undefined,
-  search: filters.search || undefined,
-})
-
 const {
   data: docs,
   pending,
   error,
   refresh,
 } = await useAsyncData<AdminDoc[]>('admin-docs', () =>
-  $fetch('/api/admin/library', {
-    params: buildParams(),
-  }),
+  $fetch('/api/admin/library'),
 )
 
-// refetch whenever filters change
-watch(
-  () => ({ ...filters }),
-  () => {
-    refresh()
-  },
-  { deep: true },
-)
+// 🚨 filter on the client, not in the API
+const filteredDocs = computed<AdminDoc[]>(() => {
+  let list = docs.value || []
+
+  if (filters.approval !== 'all') {
+    list = list.filter(d => d.approval_status === filters.approval)
+  }
+
+  if (filters.question !== 'all') {
+    list = list.filter(d => d.question_status === filters.question)
+  }
+
+  if (filters.visibility !== 'all') {
+    list = list.filter(d => d.visibility === filters.visibility)
+  }
+
+  if (filters.search.trim()) {
+    const term = filters.search.trim().toLowerCase()
+    list = list.filter(d => {
+      const inTitle = d.title?.toLowerCase().includes(term)
+      const inCourse = d.course_code?.toLowerCase().includes(term)
+      const inUploader =
+        d.uploader_name?.toLowerCase().includes(term) ||
+        d.uploader_email?.toLowerCase().includes(term)
+      return inTitle || inCourse || inUploader
+    })
+  }
+
+  return list
+})
 
 const generatingId = ref<string | null>(null)
 
@@ -228,7 +241,6 @@ const onGenerate = async (id: string) => {
     await refresh()
   } catch (err) {
     console.error('Failed to generate questions', err)
-    // optional: hook into your toast system here
   } finally {
     generatingId.value = null
   }
