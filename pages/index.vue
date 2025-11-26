@@ -622,6 +622,7 @@ import DocItem from '~/components/DocItem.vue'
 import { useToasts } from '~/stores/useToasts'
 import type { DocumentRow } from '~/types/models'
 import { getAvatarInitials } from '~/utils/avatar'
+import { useReadyDocs } from '~/composables/useReadyDocs'
 
 const auth = useAuth()
 const library = useLibrary()
@@ -693,31 +694,12 @@ const docsCount = computed(
 )
 
 /**
- * Docs that are fully ready for both Ask + Quick Drill:
- * - ingestion status ready (doc.status === 'ready')
- * - MCQs ready (doc.question_status === 'ready')
- * - visible to this user (course packs or their own personal docs)
+ * Docs fully ready for Ask + Quick Drill:
+ * - status = 'ready'
+ * - question_status = 'has_questions'
+ * - visibility / approval handled in useReadyDocs
  */
-const readyDocsForUser = computed(() =>
-  (library.documents as DocumentRow[]).filter((doc: any) => {
-    if (doc.status !== 'ready') return false
-    if (doc.question_status !== 'ready') return false
-
-    // Course packs (approved)
-    if (doc.visibility === 'course') {
-      return (doc.approval_status ?? 'pending') === 'approved'
-    }
-
-    // Personal docs – only when feature is enabled later
-    if (!doc.visibility || doc.visibility === 'personal') {
-      // We just check ownership here; actual feature gating can be elsewhere
-      return doc.user_id === auth.profile?.id
-    }
-
-    return false
-  }),
-)
-
+const readyDocsForUser = useReadyDocs(library)
 const readyDocsCount = computed(() => readyDocsForUser.value.length)
 
 const showReadyDocsHint = computed(
@@ -1022,3 +1004,4 @@ async function loadCourses() {
   }
 }
 </script>
+

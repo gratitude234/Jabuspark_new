@@ -360,44 +360,22 @@
   </main>
 </template>
 
+
 <script setup lang="ts">
 import Button from '~/components/Button.vue'
 import Card from '~/components/Card.vue'
 import MCQCard from '~/components/MCQCard.vue'
 import { useReadyDocs } from '~/composables/useReadyDocs'
-import type { DrillQuestion, DocumentRow } from '~/types/models'
+import type { DrillQuestion } from '~/types/models'
 import { useToasts } from '~/stores/useToasts'
 
 const library = useLibrary()
 const toasts = useToasts()
 const route = useRoute()
 
-// Base "ready for AI" docs (from composable)
-const baseReadyDocs = useReadyDocs(library)
-
-/**
- * MCQ-ready docs used for Quick Drill:
- * - doc.status === 'ready'           (ingestion done)
- * - doc.question_status === 'ready'  (MCQs generated)
- * - if course pack: visibility='course' and approval_status='approved'
- * - if personal: visibility='personal' (for when you re-enable it later)
- */
-const readyDocs = computed<DocumentRow[]>(() =>
-  (baseReadyDocs.value as DocumentRow[]).filter((doc: any) => {
-    if (doc.status !== 'ready') return false
-    if (doc.question_status !== 'ready') return false
-
-    if (doc.visibility === 'course') {
-      return (doc.approval_status ?? 'pending') === 'approved'
-    }
-
-    if (!doc.visibility || doc.visibility === 'personal') {
-      return true
-    }
-
-    return false
-  }),
-)
+// Docs that are fully ready for MCQs (status='ready', question_status='has_questions')
+// visibility + approval handled inside useReadyDocs.
+const readyDocs = useReadyDocs(library)
 
 const difficulty = ref<'easy' | 'mixed' | 'hard'>('mixed')
 const difficultyOptions: Array<{
@@ -702,7 +680,6 @@ async function submitDrill(auto = false) {
   if (currentDrillId.value) {
     try {
       const attempts = questions.value.map((q) => ({
-
         questionId: q.id,
         choiceIndex: responses[q.id] ?? -1,
       }))
