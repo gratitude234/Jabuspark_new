@@ -43,21 +43,42 @@ export default defineEventHandler(async (event) => {
   // 1) Verify docs exist, are ready + have questions, and user can access them
   const { data: docs, error: docsError } = await supabase
     .from('documents')
-    .select('id, user_id, visibility, approval_status, status, question_status')
+    .select(
+      'id, user_id, visibility, approval_status, status, question_status, question_count',
+    )
     .in('id', docIds)
 
   if (docsError) {
     throw createError({ statusCode: 500, statusMessage: docsError.message })
   }
 
-  const accessible = (docs || []).filter((doc) => {
-    if (!doc) return false
-    const isReady =
-      doc.status === 'ready' && doc.question_status === 'has_questions'
-    const isOwner = doc.user_id === user.id
+  const accessible = (docs || []).filter((rawDoc: any) => {
+    if (!rawDoc) return false
+
+    // Ingestion must be complete
+    const status = rawDoc.status
+    if (status !== 'ready') return false
+
+    // MCQs must be ready
+    const questionStatus = rawDoc.question_status ?? 'none'
+    if (questionStatus !== 'ready') return false
+
+    // Optional guard: if question_count is present, require > 0.
+    // For older rows where it's null/undefined, we don't block.
+    const questionCount =
+      typeof rawDoc.question_count === 'number'
+        ? rawDoc.question_count
+        : null
+    if (questionCount !== null && questionCount <= 0) return false
+
+    const isOwner = rawDoc.user_id === user.id
+    const visibility = rawDoc.visibility ?? 'personal'
     const isApprovedCourse =
-      doc.visibility === 'course' && doc.approval_status === 'approved'
-    return isReady && (isOwner || isApprovedCourse)
+      visibility === 'course' &&
+      (rawDoc.approval_status ?? 'pending') === 'approved'
+
+    // Personal docs: owner only. Course docs: must be approved.
+    return isOwner || isApprovedCourse
   })
 
   if (!accessible.length) {
@@ -72,11 +93,11 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 403,
       statusMessage:
-        'Some selected documents are not accessible or ready with questions yet.',
+        'Some selected documents are not accessible or not ready with questions yet.',
     })
   }
 
-  const verifiedDocIds = accessible.map((doc) => doc.id)
+  const verifiedDocIds = accessible.map((doc: any) => doc.id)
 
   // 2) Pull questions from the pool (pre-generated, per document)
   const { data: rows, error: questionsError } = await supabase
