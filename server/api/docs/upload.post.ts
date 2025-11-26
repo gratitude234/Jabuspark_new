@@ -73,7 +73,7 @@ export default defineEventHandler(async (event) => {
       user_id: user.id,
       title: filePart.filename?.replace(/\.pdf$/i, '') || 'Untitled',
       storage_path: path,
-
+      
       visibility,
       approval_status: approvalStatus,
 
