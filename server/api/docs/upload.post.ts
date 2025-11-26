@@ -4,7 +4,7 @@ import { serverSupabaseUser, serverSupabaseClient } from '#supabase/server'
 
 const MAX_BYTES = 5 * 1024 * 1024 // 5 MB
 
-export default defineEventHandler(async (event) => { 
+export default defineEventHandler(async (event) => {
   const user = await serverSupabaseUser(event)
   if (!user) {
     throw createError({ statusCode: 401, statusMessage: 'Sign in required' })
@@ -25,7 +25,9 @@ export default defineEventHandler(async (event) => {
   if (filePart.data.length > MAX_BYTES) {
     throw createError({
       statusCode: 413,
-      statusMessage: `File too large. Max ${(MAX_BYTES / (1024 * 1024)).toFixed(1)} MB`,
+      statusMessage: `File too large. Max ${(MAX_BYTES / (1024 * 1024)).toFixed(
+        1,
+      )} MB`,
     })
   }
 
@@ -88,7 +90,8 @@ export default defineEventHandler(async (event) => {
       size_bytes: filePart.data.length,
 
       // question pipeline flags
-      question_status: 'pending_admin',
+      // start with "none" = no MCQs yet
+      question_status: 'none',
       question_count: 0,
     })
     .select()
@@ -97,7 +100,8 @@ export default defineEventHandler(async (event) => {
   if (insertError) {
     throw createError({
       statusCode: 500,
-      statusMessage: insertError.message || 'Failed to create document row',
+      statusMessage:
+        insertError.message || 'Failed to create document row',
     })
   }
 
