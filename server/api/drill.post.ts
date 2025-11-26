@@ -1,32 +1,6 @@
 // server/api/drill.post.ts
+import { readBody, createError } from 'h3'
 import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
-
-interface DrillBody {
-  docIds?: string[]
-  count?: number
-  difficulty?: 'easy' | 'mixed' | 'hard'
-}
-
-interface RawQuestionRow {
-  id: string
-  stem: string
-  options: string[]
-  correct: number
-  explanation: string | null
-  doc_id: string | null
-  difficulty: string | null
-  topic_tags?: string[] | null
-}
-
-// Simple array shuffle
-function shuffle<T>(arr: T[]): T[] {
-  const copy = [...arr]
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[copy[i], copy[j]] = [copy[j], copy[i]]
-  }
-  return copy
-}
 
 export default defineEventHandler(async (event) => {
   const client = await serverSupabaseClient(event)
@@ -39,85 +13,116 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const body = (await readBody<DrillBody>(event)) || {}
-  const docIds = body.docIds ?? []
-  const count = body.count ?? 10
-  const difficulty = body.difficulty ?? 'mixed' // kept for metadata only
+  // Body from frontend:
+  // { docIds: string[], count: number, difficulty: 'easy' | 'mixed' | 'hard' }
+  const body = await readBody<{
+    docIds?: string[]
+    count?: number
+    difficulty?: 'easy' | 'mixed' | 'hard'
+  }>(event)
 
-  if (!Array.isArray(docIds) || docIds.length === 0) {
+  const docIds = Array.isArray(body.docIds)
+    ? body.docIds.filter(Boolean)
+    : []
+
+  const count = Number(body.count) || 10
+  const difficulty = body.difficulty || 'mixed'
+
+  if (!docIds.length) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'At least one docId is required',
+      statusMessage: 'No docs selected for drill',
     })
   }
 
-  if (count < 1 || count > 50) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Count must be between 1 and 50',
-    })
-  }
-
-  // 🔎 Get ALL questions for these docs (NO difficulty filter for now)
-  const { data, error } = await client
+  // --- Fetch questions from public.questions -----------------------------
+  // Important: we use the real column names here: doc_id, difficulty, drill_id.
+  let query = client
     .from('questions')
-    .select('id, stem, options, correct, explanation, doc_id, difficulty, topic_tags')
+    .select(
+      'id, stem, options, correct, explanation, citations, doc_id, section_topic, section_id, difficulty',
+    )
     .in('doc_id', docIds)
+    .is('drill_id', null) // only questions not tied to a past drill
+
+  // For "mixed" we DON'T filter difficulty – we pull from all difficulties.
+  if (difficulty !== 'mixed') {
+    query = query.eq('difficulty', difficulty)
+  }
+
+  const { data, error } = await query.limit(count)
 
   if (error) {
-    console.error('[api/drill] questions query error', error)
+    console.error('[drill] questions query error', error)
     throw createError({
       statusCode: 500,
       statusMessage: 'Failed to load questions',
     })
   }
 
-  const rows = (data || []) as RawQuestionRow[]
+  const rows = data || []
 
+  // If there are literally no rows, just return empty; frontend already shows the banner.
   if (!rows.length) {
-    // Frontend will show the "No questions available yet..." toast
     return {
       sessionId: null,
       questions: [],
     }
   }
 
-  // 🎲 Shuffle & clip to requested count
-  const selected = shuffle(rows).slice(0, count)
+  // --- Shuffle & trim to requested count ---------------------------------
+  for (let i = rows.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[rows[i], rows[j]] = [rows[j], rows[i]]
+  }
 
-  const questions = selected.map((q) => ({
-    id: q.id,
-    stem: q.stem,
-    options: q.options || [],
-    correct: q.correct,
-    explanation: q.explanation,
-    docId: q.doc_id,
-    topic: (q.topic_tags && q.topic_tags[0]) || null,
-    sectionId: null,
-    answerExplanation: q.explanation,
-    citations: [], // you can wire this up later if you want
+  const selected = rows.slice(0, Math.min(count, rows.length))
+
+  // --- Create drill session ----------------------------------------------
+  let sessionId: string | null = null
+
+  try {
+    sessionId = crypto.randomUUID()
+  } catch {
+    // Node < 19 fallback if needed
+    sessionId = `${user.id}-${Date.now()}`
+  }
+
+  try {
+    const { error: sessionError } = await client.from('drill_sessions').insert({
+      id: sessionId,
+      user_id: user.id,
+      metadata: {
+        docIds,
+        count,
+        difficulty,
+      },
+      score: null,
+      accuracy: null,
+    })
+
+    if (sessionError) {
+      console.warn('[drill] failed to create drill_session', sessionError)
+      sessionId = null // don’t break the drill; just skip session logging
+    }
+  } catch (e) {
+    console.warn('[drill] unexpected error creating drill_session', e)
+    sessionId = null
+  }
+
+  // --- Shape questions for frontend --------------------------------------
+  const questions = selected.map((row: any) => ({
+    id: row.id,
+    stem: row.stem,
+    options: row.options || [],
+    correct: row.correct,
+    explanation: row.explanation,
+    docId: row.doc_id,
+    topic: row.section_topic ?? null,
+    sectionId: row.section_id ?? null,
+    answerExplanation: row.explanation,
+    citations: Array.isArray(row.citations) ? row.citations : [],
   }))
-
-  // Create a drill session (for leaderboard / history)
-  const sessionId = crypto.randomUUID()
-  const metadata = {
-    docIds,
-    count,
-    difficulty,
-  }
-
-  const { error: sessionError } = await client.from('drill_sessions').insert({
-    id: sessionId,
-    user_id: user.id,
-    metadata,
-    score: null,
-    accuracy: null,
-  })
-
-  if (sessionError) {
-    console.error('[api/drill] failed to insert drill_session', sessionError)
-    // non-fatal – user can still drill
-  }
 
   return {
     sessionId,
