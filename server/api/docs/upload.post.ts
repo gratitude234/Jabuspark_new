@@ -2,7 +2,7 @@
 import { createError, readMultipartFormData } from 'h3'
 import { serverSupabaseUser, serverSupabaseClient } from '#supabase/server'
 
-const MAX_BYTES = 5 * 1024 * 1024 // 5 MB
+const MAX_BYTES = 20 * 1024 * 1024 // 20 MB
 
 export default defineEventHandler(async (event) => {
   const user = await serverSupabaseUser(event)
