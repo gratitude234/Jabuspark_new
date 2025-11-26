@@ -1,16 +1,36 @@
 // server/api/drill.post.ts
 import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
 
-type Difficulty = 'easy' | 'mixed' | 'hard'
-
 interface DrillBody {
   docIds?: string[]
   count?: number
-  difficulty?: Difficulty
+  difficulty?: 'easy' | 'mixed' | 'hard'
+}
+
+interface RawQuestionRow {
+  id: string
+  stem: string
+  options: string[]
+  correct: number
+  explanation: string | null
+  doc_id: string | null
+  difficulty: string | null
+  topic_tags?: string[] | null
+}
+
+// tiny helper to shuffle questions
+function shuffle<T>(arr: T[]): T[] {
+  const copy = [...arr]
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[copy[i], copy[j]] = [copy[j], copy[i]]
+  }
+  return copy
 }
 
 export default defineEventHandler(async (event) => {
-  const client = serverSupabaseClient(event)
+  // ✅ proper server-side Supabase client
+  const client = await serverSupabaseClient(event)
   const user = await serverSupabaseUser(event)
 
   if (!user) {
@@ -20,73 +40,82 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const body = await readBody<DrillBody>(event)
+  const body = (await readBody<DrillBody>(event)) || {}
+  const docIds = body.docIds ?? []
+  const count = body.count ?? 10
+  const difficulty = body.difficulty ?? 'mixed'
 
-  const docIds = (body.docIds || []).filter(Boolean)
-  if (!docIds.length) {
+  if (!Array.isArray(docIds) || docIds.length === 0) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'docIds is required',
+      statusMessage: 'At least one docId is required',
     })
   }
 
-  const requestedCount = body.count ?? 10
-  const count = Math.max(1, Math.min(requestedCount, 50))
-  const difficulty: Difficulty = body.difficulty ?? 'mixed'
+  if (count < 1 || count > 50) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Count must be between 1 and 50',
+    })
+  }
 
-  // ----- load questions from public.questions -----
+  // 🔎 Get all questions for these docs
   let query = client
     .from('questions')
-    .select(
-      'id, stem, options, correct, explanation, doc_id, section_id, difficulty',
-    )
+    .select('id, stem, options, correct, explanation, doc_id, difficulty, topic_tags')
     .in('doc_id', docIds)
 
-  // "mixed" = no filter. "easy"/"hard" = filter.
+  // Difficulty handling:
+  // - "mixed": no filter
+  // - "easy" / "hard": prefer matching difficulty, but allow nulls
   if (difficulty === 'easy' || difficulty === 'hard') {
-    query = query.eq('difficulty', difficulty)
+    query = query.or(
+      `difficulty.eq.${difficulty},difficulty.is.null`,
+    )
   }
 
   const { data, error } = await query
 
   if (error) {
-    console.error('[drill] Supabase error loading questions', error)
+    console.error('[api/drill] questions query error', error)
     throw createError({
       statusCode: 500,
-      statusMessage: error.message,
+      statusMessage: 'Failed to load questions',
     })
   }
 
-  if (!data || data.length === 0) {
-    // No questions yet – front-end will show the “No questions available…” toast
+  const rows = (data || []) as RawQuestionRow[]
+
+  if (!rows.length) {
+    // Frontend already has logic to show "No questions available yet…"
     return {
       sessionId: null,
-      questions: [] as any[],
+      questions: [],
     }
   }
 
-  // Shuffle and take up to `count`
-  const shuffled = [...data].sort(() => Math.random() - 0.5)
-  const selected = shuffled.slice(0, Math.min(count, shuffled.length))
+  // 🎲 randomise & clip to requested count
+  const selected = shuffle(rows).slice(0, count)
 
-  // Map DB rows to DrillQuestion shape expected by frontend
+  // Map to the shape your frontend expects (DrillQuestion)
   const questions = selected.map((q) => ({
     id: q.id,
     stem: q.stem,
-    options: q.options,
+    options: q.options || [],
     correct: q.correct,
     explanation: q.explanation,
     docId: q.doc_id,
-    topic: null,
-    sectionId: q.section_id ?? null,
-    citations: [] as any[],
+    topic: (q.topic_tags && q.topic_tags[0]) || null,
+    sectionId: null,
+    answerExplanation: q.explanation,
+    citations: [], // you can wire this up later if needed
   }))
 
-  // Create a drill_session row (non-critical: failure is logged but doesn’t break drill)
+  // Create a drill session row
   const sessionId = crypto.randomUUID()
   const metadata = {
     docIds,
-    count: questions.length,
+    count,
     difficulty,
   }
 
@@ -99,8 +128,8 @@ export default defineEventHandler(async (event) => {
   })
 
   if (sessionError) {
-    console.warn('[drill] failed to create drill_session', sessionError)
-    // Still return questions; we just lose analytics for this run.
+    console.error('[api/drill] failed to insert drill_session', sessionError)
+    // still return questions so the user can drill
   }
 
   return {
