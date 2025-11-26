@@ -31,12 +31,13 @@ export const useLibrary = defineStore('library', {
 
       const { data, error } = await client
         .from('documents')
-        .select('*, courses:course_id(id, code, title, level)')
+        .select('*') // ✅ simple select; no join to non-existent courses table
         .order('updated_at', { ascending: false })
 
       this.loading = false
 
       if (error) {
+        console.error('[library.loadDocuments] error', error)
         this.error = error.message
         return
       }
