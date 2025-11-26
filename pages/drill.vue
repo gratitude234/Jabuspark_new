@@ -82,10 +82,9 @@
           </label>
 
           <p v-if="!readyDocs.length" class="text-xs text-slate-500">
-            Upload and ingest at least one PDF and wait for your tutor/admin to
-            add MCQs. Once a doc is
-            <span class="font-semibold text-success">Ready</span> with
-            questions, it will appear here.
+            Once at least one course pack has been ingested and MCQs added by
+            your tutor/admin, it will appear here as
+            <span class="font-semibold text-success">Ready</span> for drill.
           </p>
         </div>
 
@@ -366,14 +365,40 @@ import Button from '~/components/Button.vue'
 import Card from '~/components/Card.vue'
 import MCQCard from '~/components/MCQCard.vue'
 import { useReadyDocs } from '~/composables/useReadyDocs'
-import type { DrillQuestion } from '~/types/models'
+import type { DrillQuestion, DocumentRow } from '~/types/models'
 import { useToasts } from '~/stores/useToasts'
 
 const library = useLibrary()
 const toasts = useToasts()
 const route = useRoute()
 
-const readyDocs = useReadyDocs(library)
+// Base "ready for AI" docs (from composable)
+const baseReadyDocs = useReadyDocs(library)
+
+/**
+ * MCQ-ready docs used for Quick Drill:
+ * - doc.status === 'ready'           (ingestion done)
+ * - doc.question_status === 'ready'  (MCQs generated)
+ * - if course pack: visibility='course' and approval_status='approved'
+ * - if personal: visibility='personal' (for when you re-enable it later)
+ */
+const readyDocs = computed<DocumentRow[]>(() =>
+  (baseReadyDocs.value as DocumentRow[]).filter((doc: any) => {
+    if (doc.status !== 'ready') return false
+    if (doc.question_status !== 'ready') return false
+
+    if (doc.visibility === 'course') {
+      return (doc.approval_status ?? 'pending') === 'approved'
+    }
+
+    if (!doc.visibility || doc.visibility === 'personal') {
+      return true
+    }
+
+    return false
+  }),
+)
+
 const difficulty = ref<'easy' | 'mixed' | 'hard'>('mixed')
 const difficultyOptions: Array<{
   label: string
@@ -543,7 +568,6 @@ async function fetchLeaderboard() {
     const doc = readyDocs.value.find((d) =>
       selectedDocs.value.includes(d.id),
     )
-    // course_id might not be typed on DocumentRow, so we access via any
     const courseId = (doc as any)?.course_id || null
     const query = courseId ? { courseId } : undefined
 
@@ -561,7 +585,7 @@ async function startDrill() {
 
   if (!readyDocs.value.length) {
     const message =
-      'Upload and ingest a PDF first, then wait for MCQs to be added.'
+      'No docs with MCQs yet. Once a course pack is Ready with questions, it will show up here.'
     loadError.value = message
     toasts.error(message)
     return
@@ -627,7 +651,6 @@ async function startDrill() {
     })
 
     if (!questions.value.length) {
-      // Explicit message when admin hasn’t added MCQs yet
       const message =
         'No questions available yet for these docs. Your tutor/admin may still be adding MCQs.'
       loadError.value = message
@@ -679,6 +702,7 @@ async function submitDrill(auto = false) {
   if (currentDrillId.value) {
     try {
       const attempts = questions.value.map((q) => ({
+
         questionId: q.id,
         choiceIndex: responses[q.id] ?? -1,
       }))

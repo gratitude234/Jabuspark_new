@@ -4,7 +4,7 @@ import { serverSupabaseUser, serverSupabaseClient } from '#supabase/server'
 
 const MAX_BYTES = 5 * 1024 * 1024 // 5 MB
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async (event) => { 
   const user = await serverSupabaseUser(event)
   if (!user) {
     throw createError({ statusCode: 401, statusMessage: 'Sign in required' })

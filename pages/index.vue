@@ -59,7 +59,7 @@
           {{ heroTitle }}
         </h1>
         <p class="text-xs text-slate-200 sm:text-sm">
-          Upload handouts, get MCQs created, and chat with your notes &mdash;
+          Turn your course handouts into MCQs and chat with your notes &mdash;
           all tuned for JABU exams.
         </p>
       </div>
@@ -99,7 +99,8 @@
 
       <!-- If no resume, show a soft hint -->
       <p v-else class="text-[11px] text-slate-300">
-        No active session yet. Upload a PDF or start a Quick Drill to begin.
+        No active session yet. Once your course packs are ready, start a Quick
+        Drill or Ask session to begin.
       </p>
     </section>
 
@@ -127,7 +128,7 @@
             {{ docsCount }}
           </p>
           <p class="text-[11px] text-slate-500">
-            Handouts & notes you’ve uploaded.
+            Course packs and personal docs (when enabled).
           </p>
         </Card>
 
@@ -141,7 +142,7 @@
             {{ readyDocsCount }}
           </p>
           <p class="text-[11px] text-slate-500">
-            Docs ready for Ask + Quick Drill (with MCQs added).
+            Docs ready for Ask + Quick Drill (ingested &amp; MCQs added).
           </p>
         </Card>
 
@@ -160,12 +161,9 @@
         </Card>
       </div>
 
-      <p
-        v-if="showReadyDocsHint"
-        class="text-[11px] text-warning/90"
-      >
-        Upload your first PDF and wait for MCQs to be added to unlock Ask +
-        Quick Drill.
+      <p v-if="showReadyDocsHint" class="text-[11px] text-warning/90">
+        Once your course packs are processed and MCQs are added, Ask + Quick
+        Drill will unlock here.
       </p>
     </section>
 
@@ -181,7 +179,8 @@
         v-if="!profileComplete"
         class="space-y-2 border border-borderSubtle bg-surface/80 text-sm text-slate-300"
       >
-        Complete your study profile to see department-specific courses and shared packs.
+        Complete your study profile to see department-specific courses and
+        shared packs.
       </Card>
 
       <div v-else class="space-y-2">
@@ -237,7 +236,7 @@
       </p>
 
       <div class="grid gap-3 md:grid-cols-3">
-        <!-- Upload personal / course doc -->
+        <!-- Upload course pack (reps/admin only) or info card for students -->
         <ClientOnly>
           <template #fallback>
             <div
@@ -247,43 +246,12 @@
             </div>
           </template>
 
+          <!-- Reps / tutors / admins: can upload course packs -->
           <div
-            v-if="canUpload"
+            v-if="canUpload && isCourseRep"
             class="flex flex-col gap-3 rounded-2xl border border-dashed border-borderSubtle bg-surface/90 p-4 text-left text-sm"
           >
             <button
-              class="w-full rounded-xl border border-borderSubtle/60 bg-surface/80 px-3 py-2 text-left transition hover:border-primary hover:bg-background"
-              :disabled="uploading"
-              @click="selectFile('personal')"
-            >
-              <div class="space-y-1">
-                <p class="text-base font-semibold">
-                  {{
-                    uploading && uploadMode === 'personal'
-                      ? 'Uploading…'
-                      : 'Upload personal PDF'
-                  }}
-                </p>
-                <p class="text-[11px] text-slate-400">
-                  Handouts, notes, extra material
-                </p>
-              </div>
-              <p
-                v-if="uploading && uploadMode === 'personal'"
-                class="mt-2 text-[11px] text-primary-soft"
-              >
-                Hold on &mdash; we’ll start processing in the background.
-              </p>
-              <p
-                v-else
-                class="mt-2 text-[11px] text-slate-400"
-              >
-                Private to your account only.
-              </p>
-            </button>
-
-            <button
-              v-if="isCourseRep"
               class="w-full rounded-xl border border-borderSubtle/60 bg-background px-3 py-2 text-left transition hover:border-accent hover:bg-accent/10"
               :disabled="uploading"
               @click="selectFile('course')"
@@ -297,7 +265,7 @@
                   }}
                 </p>
                 <p class="text-[11px] text-slate-400">
-                  Official handouts, schemes, past questions
+                  Official handouts, schemes, past questions.
                 </p>
               </div>
               <p
@@ -306,15 +274,32 @@
               >
                 Sending to Course Library reviewers…
               </p>
-              <p
-                v-else
-                class="mt-2 text-[11px] text-accent/90"
-              >
+              <p v-else class="mt-2 text-[11px] text-accent/90">
                 Visible to everyone after tutor/admin approval.
               </p>
             </button>
           </div>
 
+          <!-- Normal students: info about course packs -->
+          <div
+            v-else-if="canUpload"
+            class="flex flex-col justify-between rounded-2xl border border-dashed border-borderSubtle bg-surface/90 p-4 text-left text-sm"
+          >
+            <div class="space-y-1">
+              <p class="text-base font-semibold">
+                Course packs are added for you
+              </p>
+              <p class="text-[11px] text-slate-400">
+                Your course rep or tutor uploads official handouts. Once
+                they’re processed, you can use Ask + Quick Drill.
+              </p>
+            </div>
+            <p class="mt-2 text-[11px] text-slate-500">
+              Personal uploads will be available for premium users soon.
+            </p>
+          </div>
+
+          <!-- Not signed in -->
           <NuxtLink
             v-else
             to="/me"
@@ -322,14 +307,14 @@
           >
             <div class="space-y-1">
               <p class="text-base font-semibold">
-                Sign in to upload
+                Sign in to view course packs
               </p>
               <p class="text-[11px] text-slate-400">
                 Tap to get a magic link to your JABU email.
               </p>
             </div>
             <p class="mt-2 text-[11px] text-slate-400">
-              Your personal docs stay private.
+              You’ll see shared course packs for your department here.
             </p>
           </NuxtLink>
         </ClientOnly>
@@ -344,7 +329,7 @@
               Quick Drill
             </p>
             <p class="text-[11px] text-slate-400">
-              MCQs from your docs · instant marking (after MCQs are added).
+              MCQs from ready docs · instant marking and countdown.
             </p>
           </div>
           <p class="mt-2 text-[11px] text-accent/90">
@@ -416,7 +401,7 @@
           <p
             class="text-xs uppercase tracking-[0.18em] text-slate-500"
           >
-            Course Library &mdash; Nursing 200L
+            Course Library &mdash; {{ cohortLabel }}
           </p>
         </div>
 
@@ -497,8 +482,8 @@
               department, they’ll appear here as shared course packs.
             </p>
             <p class="text-[11px] text-slate-500">
-              For now, you can still upload your own PDFs and use Ask +
-              (once MCQs are added) Quick Drill.
+              Ask your rep or tutor to share the main handouts and past
+              questions for your track.
             </p>
           </Card>
         </div>
@@ -555,11 +540,8 @@
             </p>
           </template>
           <p class="mt-4 text-sm text-slate-500">
-            {{
-              canUpload
-                ? 'Upload your first PDF to start asking questions. Quick Drill will unlock once MCQs are added.'
-                : 'Sign in to upload your PDFs and turn them into drills.'
-            }}
+            Personal uploads are paused for now. As we roll out premium access,
+            you’ll be able to turn your own notes into Ask + Quick Drill too.
           </p>
         </ClientOnly>
       </div>
@@ -570,7 +552,7 @@
       <p
         class="text-xs uppercase tracking-[0.18em] text-slate-500"
       >
-        Community – Nursing 200L
+        Community – {{ cohortLabel }}
       </p>
       <Card class="space-y-3 border border-borderSubtle bg-surface/95">
         <p class="text-sm text-slate-200">
@@ -602,7 +584,8 @@
         <ol class="space-y-2 text-sm text-slate-200">
           <li>
             <span class="font-semibold text-accent">1.</span>
-            Upload one course PDF (e.g. ANA 203 Embryology handout).
+            Start with one official course PDF (e.g. ANA 203 Embryology
+            handout) in your Course Library.
           </li>
           <li>
             <span class="font-semibold text-accent">2.</span>
@@ -636,7 +619,6 @@
 <script setup lang="ts">
 import Card from '~/components/Card.vue'
 import DocItem from '~/components/DocItem.vue'
-import { useReadyDocs } from '~/composables/useReadyDocs'
 import { useToasts } from '~/stores/useToasts'
 import type { DocumentRow } from '~/types/models'
 import { getAvatarInitials } from '~/utils/avatar'
@@ -645,7 +627,6 @@ const auth = useAuth()
 const library = useLibrary()
 const router = useRouter()
 const toasts = useToasts()
-const readyDocs = useReadyDocs(library)
 const supabase = useSupabaseClient()
 const { profile, isLoading: profileLoading, refreshProfile: refreshProfileStore } =
   useProfile()
@@ -710,10 +691,39 @@ const personalDocs = computed<DocumentRow[]>(() =>
 const docsCount = computed(
   () => personalDocs.value.length + courseDocs.value.length,
 )
-const readyDocsCount = computed(() => readyDocs.value.length)
+
+/**
+ * Docs that are fully ready for both Ask + Quick Drill:
+ * - ingestion status ready (doc.status === 'ready')
+ * - MCQs ready (doc.question_status === 'ready')
+ * - visible to this user (course packs or their own personal docs)
+ */
+const readyDocsForUser = computed(() =>
+  (library.documents as DocumentRow[]).filter((doc: any) => {
+    if (doc.status !== 'ready') return false
+    if (doc.question_status !== 'ready') return false
+
+    // Course packs (approved)
+    if (doc.visibility === 'course') {
+      return (doc.approval_status ?? 'pending') === 'approved'
+    }
+
+    // Personal docs – only when feature is enabled later
+    if (!doc.visibility || doc.visibility === 'personal') {
+      // We just check ownership here; actual feature gating can be elsewhere
+      return doc.user_id === auth.profile?.id
+    }
+
+    return false
+  }),
+)
+
+const readyDocsCount = computed(() => readyDocsForUser.value.length)
+
 const showReadyDocsHint = computed(
   () => !docsLoading.value && readyDocsCount.value === 0,
 )
+
 const profileComplete = computed(
   () =>
     Boolean(
@@ -886,53 +896,49 @@ async function handleUpload(event: Event) {
       mode: uploadMode.value,
     })
 
-    if (uploadMode.value === 'course') {
-      const defaultCourse =
-        typeof window !== 'undefined'
-          ? window.localStorage.getItem(LAST_COURSE_KEY) || ''
-          : ''
-      let input: string | null = ''
-      if (typeof window !== 'undefined') {
-        input =
-          window.prompt('Enter course code (e.g. ANA 203):', defaultCourse) ??
-          null
-      }
-      if (!input) {
-        console.warn('[index] handleUpload: no course code entered')
-        toasts.error('Course code is required for course library upload.')
-        return
-      }
-      const trimmed = input.trim()
-      if (!trimmed) {
-        console.warn('[index] handleUpload: empty course code after trim')
-        toasts.error('Course code is required for course library upload.')
-        return
-      }
-
-      uploadCourse.value = trimmed
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(LAST_COURSE_KEY, trimmed)
-      }
-
-      await library.uploadDocument(file, {
-        visibility: 'course',
-        course: uploadCourse.value,
-        docType: 'Lecture handout',
-      })
-      console.log('[index] handleUpload: course uploadDocument resolved', {
-        ms: Date.now() - startedAt,
-      })
-      toasts.success('Course pack uploaded. It will appear after approval.')
-    } else {
-      await library.uploadDocument(file, {
-        visibility: 'personal',
-        course: null,
-      })
-      console.log('[index] handleUpload: personal uploadDocument resolved', {
-        ms: Date.now() - startedAt,
-      })
-      toasts.success('Upload received. Processing will start shortly.')
+    // For now, only course packs are allowed (reps/tutors/admins).
+    if (uploadMode.value !== 'course') {
+      console.warn('[index] handleUpload: personal uploads disabled')
+      toasts.error('Personal uploads are disabled for now.')
+      return
     }
+
+    const defaultCourse =
+      typeof window !== 'undefined'
+        ? window.localStorage.getItem(LAST_COURSE_KEY) || ''
+        : ''
+    let input: string | null = ''
+    if (typeof window !== 'undefined') {
+      input =
+        window.prompt('Enter course code (e.g. ANA 203):', defaultCourse) ??
+        null
+    }
+    if (!input) {
+      console.warn('[index] handleUpload: no course code entered')
+      toasts.error('Course code is required for course library upload.')
+      return
+    }
+    const trimmed = input.trim()
+    if (!trimmed) {
+      console.warn('[index] handleUpload: empty course code after trim')
+      toasts.error('Course code is required for course library upload.')
+      return
+    }
+
+    uploadCourse.value = trimmed
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(LAST_COURSE_KEY, trimmed)
+    }
+
+    await library.uploadDocument(file, {
+      visibility: 'course',
+      course: uploadCourse.value,
+      docType: 'Lecture handout',
+    })
+    console.log('[index] handleUpload: course uploadDocument resolved', {
+      ms: Date.now() - startedAt,
+    })
+    toasts.success('Course pack uploaded. It will appear after approval.')
 
     console.log('[index] handleUpload: reloading documents…')
     await library.loadDocuments()
