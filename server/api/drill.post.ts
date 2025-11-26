@@ -1,43 +1,39 @@
 // server/api/drill.post.ts
-import { defineEventHandler, readBody, createError } from 'h3'
-import { serverSupabaseClient } from '#supabase/server'
+import { serverSupabaseServiceRole } from '#supabase/server'
 
 type Difficulty = 'easy' | 'mixed' | 'hard'
 
-interface DrillBody {
-  docIds?: string[]
-  count?: number
+interface DrillRequestBody {
+  docIds: string[]
+  count: number
   difficulty?: Difficulty
 }
 
 export default defineEventHandler(async (event) => {
-  const client = await serverSupabaseClient(event)
+  const body = await readBody<DrillRequestBody>(event)
 
-  const body = (await readBody(event)) as DrillBody
+  const rawDocIds = Array.isArray(body.docIds) ? body.docIds : []
+  const docIds = rawDocIds
+    .filter((id) => typeof id === 'string')
+    .map((id) => id.trim())
+    .filter(Boolean)
 
-  // --- Basic input sanity checks ---
-  const docIds = Array.isArray(body.docIds)
-    ? body.docIds.filter((id) => typeof id === 'string' && id.trim().length > 0)
-    : []
+  const count = Number(body.count) || 10
+  const difficulty: Difficulty = (body.difficulty as Difficulty) || 'mixed'
+
+  console.log('[api/drill] incoming body', body)
+  console.log('[api/drill] docIds', docIds, 'count', count, 'difficulty', difficulty)
 
   if (!docIds.length) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'No document IDs provided for drill.',
-    })
+    console.log('[api/drill] no docIds provided – returning empty')
+    return { sessionId: null, questions: [] }
   }
 
-  const count =
-    typeof body.count === 'number' && body.count > 0
-      ? Math.min(body.count, 50)
-      : 10
+  const client = await serverSupabaseServiceRole(event)
 
-  const difficulty: Difficulty =
-    body.difficulty === 'easy' || body.difficulty === 'hard'
-      ? body.difficulty
-      : 'mixed'
-
-  // --- Fetch questions for those docs ---
+  // ---------------------
+  // 1) MAIN QUERY
+  // ---------------------
   let query = client
     .from('questions')
     .select(
@@ -47,48 +43,108 @@ export default defineEventHandler(async (event) => {
       options,
       correct,
       explanation,
+      citations,
       doc_id,
-      difficulty,
-      topic_tags,
-      citations
+      section_topic,
+      section_id,
+      difficulty
     `,
     )
     .in('doc_id', docIds)
+    .is('drill_id', null)
 
-  // Only filter by difficulty if not "mixed"
-  if (difficulty !== 'mixed') {
+  // For mixed we *don’t* filter by difficulty
+  if (difficulty === 'easy' || difficulty === 'hard') {
     query = query.eq('difficulty', difficulty)
   }
 
   const { data, error } = await query
 
+  console.log('[api/drill] main query result', {
+    error,
+    rowCount: data?.length ?? 0,
+  })
+
   if (error) {
-    console.error('[drill] Supabase error', error)
+    console.error('[api/drill] error loading questions', error)
     throw createError({
       statusCode: 500,
-      statusMessage: 'Failed to fetch questions',
-      data: error,
+      statusMessage: 'Failed to load questions',
     })
   }
 
-  const questions = data ?? []
+  let rows = data || []
 
-  // If nothing came back, just return empty (frontend already shows the red toast)
-  if (!questions.length) {
-    return {
-      sessionId: null,
-      questions: [],
+  // ---------------------
+  // 2) FALLBACK QUERY
+  // ---------------------
+  if (!rows.length) {
+    console.warn(
+      '[api/drill] main query returned 0 rows. Running fallback query without filters (except doc_id)…',
+    )
+
+    const { data: fallbackData, error: fallbackError } = await client
+      .from('questions')
+      .select(
+        `
+        id,
+        stem,
+        options,
+        correct,
+        explanation,
+        citations,
+        doc_id,
+        section_topic,
+        section_id,
+        difficulty
+      `,
+      )
+      .in('doc_id', docIds)
+
+    console.log('[api/drill] fallback result', {
+      error: fallbackError,
+      rowCount: fallbackData?.length ?? 0,
+    })
+
+    if (!fallbackError && fallbackData && fallbackData.length) {
+      rows = fallbackData
     }
   }
 
-  // --- Shuffle and cap to requested count ---
-  const shuffled = [...questions].sort(() => Math.random() - 0.5)
+  // Still nothing? tell the frontend there really are no questions.
+  if (!rows.length) {
+    console.log(
+      '[api/drill] no questions found even after fallback. Returning empty.',
+    )
+    return { sessionId: null, questions: [] }
+  }
+
+  // ---------------------
+  // 3) RANDOMISE + LIMIT
+  // ---------------------
+  const shuffled = [...rows].sort(() => Math.random() - 0.5)
   const limited = shuffled.slice(0, count)
 
-  // For now we skip creating a drill_session row
-  // (sessionId=null is fine, the frontend only needs questions to run a drill)
+  const questions = limited.map((q) => ({
+    id: q.id,
+    stem: q.stem,
+    options: q.options || [],
+    correct: q.correct,
+    explanation: q.explanation,
+    docId: q.doc_id,
+    topic: q.section_topic,
+    sectionId: q.section_id,
+    answerExplanation: q.explanation,
+    citations: Array.isArray(q.citations) ? q.citations : [],
+  }))
+
+  console.log('[api/drill] returning', {
+    questionCount: questions.length,
+  })
+
+  // We’re not logging sessions yet, so leave sessionId null
   return {
     sessionId: null,
-    questions: limited,
+    questions,
   }
 })
