@@ -1,6 +1,16 @@
 // server/api/drill.post.ts
+import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
+
+type Difficulty = 'easy' | 'mixed' | 'hard'
+
+interface DrillBody {
+  docIds?: string[]
+  count?: number
+  difficulty?: Difficulty
+}
+
 export default defineEventHandler(async (event) => {
-  const client = await serverSupabaseClient(event)
+  const client = serverSupabaseClient(event)
   const user = await serverSupabaseUser(event)
 
   if (!user) {
@@ -10,11 +20,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const body = await readBody<{
-    docIds?: string[]
-    count?: number
-    difficulty?: 'easy' | 'mixed' | 'hard'
-  }>(event)
+  const body = await readBody<DrillBody>(event)
 
   const docIds = (body.docIds || []).filter(Boolean)
   if (!docIds.length) {
@@ -26,9 +32,9 @@ export default defineEventHandler(async (event) => {
 
   const requestedCount = body.count ?? 10
   const count = Math.max(1, Math.min(requestedCount, 50))
-  const difficulty = body.difficulty ?? 'mixed'
+  const difficulty: Difficulty = body.difficulty ?? 'mixed'
 
-  // --- build base query on *public.questions* ---
+  // ----- load questions from public.questions -----
   let query = client
     .from('questions')
     .select(
@@ -36,9 +42,7 @@ export default defineEventHandler(async (event) => {
     )
     .in('doc_id', docIds)
 
-  // difficulty filter:
-  // - "mixed": no filter (use anything available)
-  // - "easy" / "hard": filter to that difficulty
+  // "mixed" = no filter. "easy"/"hard" = filter.
   if (difficulty === 'easy' || difficulty === 'hard') {
     query = query.eq('difficulty', difficulty)
   }
@@ -46,7 +50,7 @@ export default defineEventHandler(async (event) => {
   const { data, error } = await query
 
   if (error) {
-    console.error('[drill] error loading questions', error)
+    console.error('[drill] Supabase error loading questions', error)
     throw createError({
       statusCode: 500,
       statusMessage: error.message,
@@ -54,18 +58,18 @@ export default defineEventHandler(async (event) => {
   }
 
   if (!data || data.length === 0) {
-    // front-end will show “No questions available yet…”
+    // No questions yet – front-end will show the “No questions available…” toast
     return {
       sessionId: null,
       questions: [] as any[],
     }
   }
 
-  // shuffle and take up to `count`
+  // Shuffle and take up to `count`
   const shuffled = [...data].sort(() => Math.random() - 0.5)
   const selected = shuffled.slice(0, Math.min(count, shuffled.length))
 
-  // map DB rows to front-end DrillQuestion shape
+  // Map DB rows to DrillQuestion shape expected by frontend
   const questions = selected.map((q) => ({
     id: q.id,
     stem: q.stem,
@@ -78,7 +82,7 @@ export default defineEventHandler(async (event) => {
     citations: [] as any[],
   }))
 
-  // create a drill_session (non-critical; failures are logged only)
+  // Create a drill_session row (non-critical: failure is logged but doesn’t break drill)
   const sessionId = crypto.randomUUID()
   const metadata = {
     docIds,
@@ -96,7 +100,7 @@ export default defineEventHandler(async (event) => {
 
   if (sessionError) {
     console.warn('[drill] failed to create drill_session', sessionError)
-    // still return questions – we don’t block the drill
+    // Still return questions; we just lose analytics for this run.
   }
 
   return {
